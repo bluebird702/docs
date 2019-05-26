@@ -13,22 +13,309 @@
 
 
 * 6.Semigroupal and Applicative
+
+이전 챕터에서 어떻게 functor와 monad가 =map= 과 =flatMap= 을 사용해서 operation들을 sequence하는지를 보았다. functor와 monad는 둘 다 엄청나게 유용한 abstraction이지만, 이 둘로 표현할 수 없는 program flow의 몇몇 타입들이 존재한다. 
+
+하나의 예는 form validation이다. form을 validate할 때, 우리가 직면한 첫번째 에러에서 멈추지 않고 모든 error를 사용자에게 리턴하고자 한다. 만약 우리가 이를 Either와 같은 monad를 이용해서 모델링한다면, 빨리 실패하고 error를 잃게 될 것이다. 예를 들어, 아래의 코드는  =parseInt= 의 첫번째 호출이 실패하고 더 이상 진행되지 않는다.   
+
+#+BEGIN_SRC scala
+import cats.syntax.either._ // for catchOnly
+
+def parseInt(str: String): Either[String, Int] = 
+    Either.catchOnly[NumberFormatException](str.toInt).
+      leftMap(_ => s"Couldn't read $str")
+for {
+  a <- parseInt("a")
+  b <- parseInt("b")
+  c <- parseInt("c")
+} yield (a + b + c)
+// res1: scala.util.Either[String,Int] = Left(Couldn't read a)
+#+END_SRC
+
+다른 예는 =Future= 들의 동시 evaluation이다. 만약 몇몇의 long-running 독립적인 task를 가지고 있다면, 당연히 동시에 실행할 수 있다. 하지만, monadic comprehension은 오직 이를 sequence하게 실행할 수만 있다. =map= 과 =flatMap= 은 우리가 원하는 것을 얻을 수 없다. 왜냐하면 이 두가지는 각각의 computation이 이전의 것에 의존적이라는 것을 가정하고 있기 때문이다. 
+
+#+BEGIN_SRC scala
+ // context2 is dependent on value1:
+context1.flatMap(value1 => context2)
+#+END_SRC
+
+위의 =parseInt= 와 =Future.apply= 호출은 서로 다른 것과 독립적이지만, =map= 과 =flatMap= 은 이를 활용할 수 없다. 원하는 결과를 달성하기 위해서는 sequencing을 보장하지 않는 더 약한 구조를 필요로 한다. 이 챕터에서 이 패턴을 지원하는 두 가지 type class를 살펴볼 것이다. 
+
+- =Semigroupal= 은 context의 pair를 합치는 표현을 에워싼다. Cats는 여러개의 인자를 가진 함수들을 sequence할 수 있도록 하는 =Semigroupal= 과 =Functor= 의 사용을 가능하게 하는 cats.syntax.apply module을 제공한다.
+
+- =Applicative= 는 =Semigroupal= 과 =Functor= 를 상속한다. =Applicative= 는 context 내에서 함수에 parameter를 적용하는 방법을 제공한다. =Applicative= 는 Chapter 4에서 소개한 =pure= method의 source이다. 
+
+Applicative는 Cats에서 강조하는 semigroupal formulation 대신에 function application의 관점으로 종종 표현된다. 이 대안적인 formulation은 Scalaz와 Haskell과 같은 다른 라이브러리와 언어들에 대한 link를 제공한다. 챕터의 끝으로 갈수록 =Semigroupal= , =Functor= , =Applicative= , =Monad= 간의 관계 뿐만 아니라 Applicative의 다른 formulation을 살펴볼 것이다. 
+
 ** Semigroupal
+cats.Semigroupal은 context를 조합할 수 있도록 하는 type class이다. 만약 type F[A]와 F[B]의 두 가지 객체를 가지고 있다면, =Semigroupal[F]= 는 이 두 객체를 조합해서 F[(A, B)]를 만들 수 있도록 한다. Cats에서의 정의는 다음과 같다: 
+
+#+BEGIN_SRC scala
+trait Semigroupal[F[_]] {
+  def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
+}
+#+END_SRC  
+
+이 챕터의 시작에서 우리가 논의한 것처럼, parameter =fa= 와 =fb= 는 서로 독립적이다: 이 파라미터를 =product= 로 전달하기 전에 이를 순서와 상관없이 compute할 수 있다. =flatMap= 과 대조적으로 파라미터들의 strict한 순서를 도입한 =flatMap= 과 대조적이다. 이는 =Monad= 를 정의할 때 얻을 수 있는 것보다 =Semigroupal= 의 instance를 정의할 때 더 많은 자유를 얻을 수 있도록 한다.
+
 *** Joining Two Contexts
-*** Joining Three or MOre Contexts
+=Semigroup= 은 value를 join할 수 있게 하는 반면에, =Semigroupal= 은 context를 join할 수 있게 한다. 다음 예제와 같이 =Option= 을 join해보자: 
+
+#+BEGIN_SRC scala
+import cats.Semigroupal
+import cats.instances.option._ // for Semigroupal
+
+Semigroupal[Option].product(Some(123), Some("abc")) 
+// res0: Option[(Int, String)] = Some((123,abc))
+#+END_SRC
+
+만약 파라미터들 모두 =Some= 의 instance라면, value들의 tuple로 끝낼 수 있다. 만약 파라미터가 둘 중 하나가 =None= 이면, 전체 result는 =None= 이다: 
+
+#+BEGIN_SRC scala
+Semigroupal[Option].product(None, Some("abc")) 
+// res1: Option[(Nothing, String)] = None
+
+Semigroupal[Option].product(Some(123), None)
+// res2: Option[(Int, Nothing)] = None
+#+END_SRC
+
+*** Joining Three or More Contexts
+=Semigroupal= 의 companion object는 =product= 의 위에 method의 집합을 정의한다. 예를 들어, =tuple2= 부터 =tuple22= method들은 =product= 를 다른 인자 개수로 일반화할 수 있다.
+
+#+BEGIN_SRC scala
+import cats.instances.option._ // for Semigroupal 
+
+Semigroupal.tuple3(Option(1), Option(2), Option(3))
+// res3: Option[(Int, Int, Int)] = Some((1,2,3))
+
+Semigroupal.tuple3(Option(1), Option(2), Option.empty[Int])
+// res4: Option[(Int, Int, Int)] = None
+#+END_SRC
+
+=map2= 부터 =map22= 까지의 method들은 사용자 정의 함수를 2부터 22 context내의 value들에 적용한다: 
+
+#+BEGIN_SRC scala
+Semigroupal.map3(Option(1), Option(2), Option(3))(_ + _ + _)
+// res5: Option[Int] = Some(6)
+
+Semigroupal.map2(Option(1), Option.empty[Int])(_ + _)
+// res6: Option[Int] = None
+#+END_SRC
+
+=Contravariant= 와 =Invariant= 의 instance를 필요로 하는 =contramap2= 부터 =contramap22= 와 =imap2= 에서 =imap22= 까지의 method들도 있다. 
+
 ** Apply Syntax
+Cats는 위에서 언급한 method들을 위해 shorthand를 제공하는 편리한 apply syntax를 제공한다. cats.syntax.apply.로 syntax를 import할 수 있다. 다음이 예제이다: 
+
+#+BEGIN_SRC scala
+import cats.instances.option._ // for Semigroupal 
+import cats.syntax.apply._ // for tupled and mapN
+#+END_SRC
+
+=tupled= method는 =Option= 의 tuple에 implicitly하게 추가된다. 이 method는 =Option= 내의 값들을 zip하기 해서 tuple을 하나의 =Option= 으로 생성하는 =Option= 을 위한 =Semigroupal= 을 사용한다.   
+
+#+BEGIN_SRC scala
+(Option(123), Option("abc")).tupled
+// res7: Option[(Int, String)] = Some((123,abc))
+#+END_SRC
+
+동일한 trick을 22개 값이 있는 경우까지 사용할 수 있다. Cats는 각각의 인자수를 위해서 분리된 =tupled= 를 정의한다. 
+
+#+BEGIN_SRC scala
+(Option(123), Option("abc"), Option(true)).tupled
+// res8: Option[(Int, String, Boolean)] = Some((123,abc,true))
+#+END_SRC
+
+tupled에 추가적으로, Cats의 apply syntax는 implicit =Functor= 와 값들을 조합하기 위해 정확한 인자수를 가지는 함수를 받아들이는 =mapN= 이라고 불리는 함수를 제공한다. 
+
+#+BEGIN_SRC scala
+case class Cat(name: String, born: Int, color: String)
+
+(
+  Option("Garfield"),
+  Option(1978),
+  Option("Orange & black")
+).mapN(Cat.apply)
+// res9: Option[Cat] = Some(Cat(Garfield,1978,Orange & black))
+#+END_SRC
+
+내부적으로 =mapN= 은 =Option= 에서 값을 뽑아내기 위해서 =Semigroupal= 과 함수에 값을 적용하기 위해 =Functor= 를 사용한다. 
+
+이 syntax가 type checked되는 것을 보면 훌륭하다. 만약 파라미터들의 타입이나 잘못된 수를 받은 함수를 넣으면 compile error를 얻을 것이다:
+
+#+BEGIN_SRC scala
+val add: (Int, Int) => Int = (a, b) => a + b 
+// add: (Int, Int) => Int = <function2>
+
+(Option(1), Option(2), Option(3)).mapN(add)
+// <console>:27: error: type mismatch;
+// found : (Int, Int) => Int
+// required: (Int, Int, Int) => ?
+// (Option(1), Option(2), Option(3)).mapN(add)
+//
+
+(Option("cats"), Option(true)).mapN(add)
+// <console>:27: error: type mismatch;
+// found : (Int, Int) => Int
+// required: (String, Boolean) => ?
+// (Option("cats"), Option(true)).mapN(add) 
+//
+#+END_SRC 
+
 *** Fancy Funtors and Apply Syntax
+Contravariant와 Invariant functor를 받는 contramapN과 imapN method를 가진 syntax를 적용해보자. 예를 들어, =Invariant= 를 사용하는 =Monoid= 들을 조합할 수 있다. 다음의 예를 보자: 
+
+#+BEGIN_SRC scala
+import cats.Monoid
+import cats.instances.boolean._ // for Monoid
+import cats.instances.int._     // for Monoid
+import cats.instances.list._    // for Monoid
+import cats.instances.string._  // for Monoid
+import cats.syntax.apply._
+
+case class Cat(
+  name: String,
+  yearOfBirth: Int,
+  favoriteFoods: List[String]
+)
+
+// for imapN
+val tupleToCat: (String, Int, List[String]) => Cat =
+  Cat.apply _
+
+val catToTuple: Cat => (String, Int, List[String]) = 
+  cat => (cat.name, cat.yearOfBirth, cat.favoriteFoods)
+
+implicit val catMonoid: Monoid[Cat] = (
+  Monoid[String],
+  Monoid[Int],
+  Monoid[List[String]]
+).imapN(tupleToCat)(catToTuple)
+#+END_SRC
+
+우리의 =Monoid= 는 "empty" Cats를 생성하게 해주고, Chapter 2의 syntax를 사용한 Cats를 추가할 수 있게 해준다: 
+
+#+BEGIN_SRC scala
+import cats.syntax.semigroup._ // for |+|
+
+val garfield = Cat("Garfield", 1978, List("Lasagne"))
+val heathcliff = Cat("Heathcliff", 1988, List("Junk Food"))
+
+garfield |+| heathcliff
+// res17: Cat = Cat(GarfieldHeathcliff,3966,List(Lasagne, Junk Food))
+#+END_SRC
+
 ** Semigroupal Applied to Different Types
+=Semigroupal= 은 항상 기대하는 동작을 제공하는 것은 아니다. 특히 =Monad= 의 instance를 가지는 type들에 대해서는 특히 그렇다. 지금까지는 =Option= 을 위한 =Semigroupal= 의 동작을 보아왔다. 다른 타입들을 위한 예제들을 살펴보자.
+
+*Future* 
+Future의 semantic은 순차적인 실행이 아닌 병렬적인 실행을 제공한다. 
+#+BEGIN_SRC scala
+import cats.Semigroupal
+import cats.instances.future._ // for Semigroupal
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global 
+import scala.language.higherKinds
+
+val futurePair = Semigroupal[Future].
+  product(Future("Hello"), Future(123))
+
+Await.result(futurePair, 1.second)
+// res1: (String, Int) = (Hello,123)
+#+END_SRC
+
+두 개의 =Future= 는 이를 생성하는 시기에 실행을 시작하고 product를 호출하는 시점에는 결과가 이미 계산되어 있다. =Future= 들을 위한 고정된 값을 zip하기 위한 syntax를 적용할 수 있다: 
+
+#+BEGIN_SRC scala
+import cats.syntax.apply._ // for mapN
+
+case class Cat(
+  name: String,
+  yearOfBirth: Int,
+  favoriteFoods: List[String]
+)
+
+val futureCat = (
+  Future("Garfield"),
+  Future(1978),
+  Future(List("Lasagne"))
+).mapN(Cat.apply)
+
+Await.result(futureCat, 1.second)
+// res4: Cat = Cat(Garfield,1978,List(Lasagne))
+#+END_SRC
+
+*List*
+=Semigroupal= 을 가지는 =List= 들을 조합하는 것은 잠재적으로 기대하지 않은 결과를 제공한다. 우리는 코드가 다음과 같이 list들을 zip하기를 원하지만, 실제로 얻게 되는 것은 list들의 element들의 cartesian product이다. 
+
+#+BEGIN_SRC scala
+import cats.Semigroupal
+import cats.instances.list._ // for Semigroupal
+
+Semigroupal[List].product(List(1, 2), List(3, 4))
+// res5: List[(Int, Int)] = List((1,3), (1,4), (2,3), (2,4))
+#+END_SRC
+
+이는 아마도 놀라울 것이다. list들을 Zip하는 것은 더 일반적인 동작이다. 왜 이렇게 동작하는 지는 다음에 살펴볼 것이다.
+
+*Either*
+이 챕터 초반에 fail-fast 대 error-handling에 대해서 이야기했었다. =product= 는 fail fast 보다는 error를 accumulate했다. 다시 아마 놀랍겠지만, 우리는 =product= 가 =flatMap= 처럼 동일하게 fail-fast 동작을 구현한 것을 찾아볼 수 있다: 
+
+#+BEGIN_SRC scala
+import cats.instances.either._ // for Semigroupal
+
+type ErrorOr[A] = Either[Vector[String], A]
+
+Semigroupal[ErrorOr].product(
+  Left(Vector("Error 1")),
+  Left(Vector("Error 2"))
+)
+// res7: ErrorOr[(Nothing, Nothing)] = Left(Vector(Error 1))
+#+END_SRC
+
+이 예제에서 =product= 는 첫번째 실패를 만나면 멈춘다. 비록 두번째 파라미터를 조사할 수 있고 그것이 실패임을 알 수 있음에도 말이다.
+ 
 *** Semigroupal Applied to Monads 
+=List= 와 =Either= 의 놀라운 결과의 이유는 그것들이 둘다 monad이기 때문이다. 일관된 semantic을 보장하기 위해서, Cats의 Monad(=Semigroupal= 을 확장)는 =map= 과 =flatMap= 의 관점에서 =product= 의 표준 정의를 제공한다. 이는    semantic의 일관성은 higher level abstraction을 위해서 중요하지만, 아직 그것에 대해서는 알지 못한다. 
+
+=Future= 를 위한 우리의 결과는 빛의 trick이다. =flatMap= 은 순차적인 순서를 제공하고, 그래서 =product= 는 동일한 것을 제공한다. 우리가 관찰한 병렬 실행은 우리의 =Future= 들이 =product= 를 호출하기 전에 실행되었기 때문에 발생하는 것이다. 이는 고전적인 create-then-flatMap pattern과 같다: 
+
+#+BEGIN_SRC scala
+val a = Future("Future 1")
+val b = Future("Future 2")
+
+for {
+  x <- a
+  y <- b
+} yield (x, y)
+#+END_SRC
+
+그래서 =Semigroupal=  대답은 Monad가 아니라 =Semigroupal= (그리고 =Applicative=)의 instance를 가지는 유용한 data type을 생성할 수 있다는 것이다. 이는 =product= 를 다른 방법들로 구현할 수 있게 해준다. 우리는 error handling을 위한 대안이 되는 data type을 살펴볼 때 이를 더 연구해 볼 것이다. 
+
 **** Exercise: The Product of Monads 
+=flatMap= 의 관점으로 =product= 를 구현해라:
+
+#+BEGIN_SRC scala
+import cats.Monad
+
+def product[M[_]: Monad, A, B](x: M[A], y: M[B]): M[(A, B)] = ???
+#+END_SRC
+
 ** Validated
 *** Creating Instances of Validated
 *** Combining Instances of Validated
 *** Methods of Validated
 *** Exercise: Form Validation
+
 ** Apply and Applicative
 *** The Hierarchy of Sequencing Type Classes
-** Summary
 
+** Summary
+monad와 functor는 이 책에서 다룬 data type들을 sequencing하는 데 가장 넓게 사용되고 있지만, semigroupal과 applicative는 가장 일반적이다. 이 type class들은 context안에서 함수를 적용하고 값을 조합할 수 있는 일반적인 메커니즘을 제공한다.
+
+~Semigroupal~ 과 ~Applicative~ 는 validation 룰들의 결과로서 독립적인 값들을 조합하기 위한 방법으로서 가장 일반적으로 사용되는 것이다. Cats는 이 특별한 목적을 위한 Validated type을 제공한다. 룰들의 조합을 표현하기 위해서 편리한 방법으로서 syntax를 제공한다.
+
+이제 이 책의 아젠다에서 functional programming concept의 대부분을 다루었다. 다음 chapter에서는 데이터 타입 간의 변환을 위한 강력한 type class들인 ~Traverse~ 와 ~Foldable~ 을 다룰 것이다. 그 다음에는 Part 1에서 다룬 모든 컨셉을 합쳐놓은 몇가지 case study를 살펴볼 것이다. 
 
 
