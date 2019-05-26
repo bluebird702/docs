@@ -1,0 +1,1264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2018-08-05 Sun 22:58 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scala with Cats</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="billy.angels" />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2018 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Scala with Cats</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#org2aeb4cb">1. Introduction</a>
+<ul>
+<li><a href="#org2da6f6a">1.1. Anatomy of a Type Class</a>
+<ul>
+<li><a href="#org3cd4e73">1.1.1. The Type Class</a></li>
+<li><a href="#org821711f">1.1.2. Type Class Instances</a></li>
+<li><a href="#org2206b22">1.1.3. Type Class Interfaces</a></li>
+</ul>
+</li>
+<li><a href="#org38f1bf1">1.2. Working with Implicits</a>
+<ul>
+<li><a href="#orgbcb8f64">1.2.1. Packaging Implicits</a></li>
+<li><a href="#org2b4c199">1.2.2. Implicit Scope</a></li>
+<li><a href="#orge2a97bd">1.2.3. Recursive Implicit Resolution</a></li>
+</ul>
+</li>
+<li><a href="#org3920556">1.3. Exercise: Printable Library</a></li>
+<li><a href="#org67ce2f7">1.4. Meet Cats</a>
+<ul>
+<li><a href="#org8529c2e">1.4.1. Importing Type Classes</a></li>
+<li><a href="#orgd2cda5f">1.4.2. Importing Default Instances</a></li>
+<li><a href="#org4f0d344">1.4.3. Importing Interface Syntax</a></li>
+<li><a href="#org9d739d5">1.4.4. Importing All The Things!</a></li>
+<li><a href="#org953d866">1.4.5. Defining Custom Instances</a></li>
+<li><a href="#orgd65f191">1.4.6. Exercise: Cat Show</a></li>
+</ul>
+</li>
+<li><a href="#orgcf0c667">1.5. Example: Eq</a>
+<ul>
+<li><a href="#org610901f">1.5.1. Equality, Liberty, and Fraternity</a></li>
+<li><a href="#org255d6d4">1.5.2. Comparing Ints</a></li>
+<li><a href="#orgf9fa0b5">1.5.3. Comparing Options</a></li>
+<li><a href="#org72a52b5">1.5.4. Comparing Custom Types</a></li>
+<li><a href="#orgb5c9f3b">1.5.5. Exercise: Equality, Liberty, and Felinity</a></li>
+</ul>
+</li>
+<li><a href="#orge3d40d5">1.6. Controlling Instance Selection</a>
+<ul>
+<li><a href="#org19db62c">1.6.1. Variance</a></li>
+</ul>
+</li>
+<li><a href="#org31b2fd9">1.7. Summary</a></li>
+</ul>
+</li>
+<li><a href="#org1ea7686">2. Monoids and Semigroups</a>
+<ul>
+<li><a href="#orged73da5">2.1. Definition of a Monoid</a></li>
+<li><a href="#org169f375">2.2. Definition of a Semigroup</a></li>
+<li><a href="#org4afafbf">2.3. Exercise: The Truth About Monoids</a></li>
+<li><a href="#orgd3e11af">2.4. Exercise: All Set for Monoids</a></li>
+<li><a href="#org3a94918">2.5. Monoids in Cats</a>
+<ul>
+<li><a href="#orgabcfa4f">2.5.1. The Monoid Type Class</a></li>
+<li><a href="#org8864098">2.5.2. Monoid Instances</a></li>
+<li><a href="#org3838b3d">2.5.3. Monoid Syntax</a></li>
+<li><a href="#org426a793">2.5.4. Exercise: Adding All The Things</a></li>
+</ul>
+</li>
+<li><a href="#org9c04030">2.6. Application of Monoids</a>
+<ul>
+<li><a href="#org7efcd27">2.6.1. Big Data</a></li>
+<li><a href="#orgc22c361">2.6.2. Distributed Systems</a></li>
+<li><a href="#orgb0cdb52">2.6.3. Monoids in the Small</a></li>
+</ul>
+</li>
+<li><a href="#orgc84ae04">2.7. Summary</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+<div id="outline-container-org2aeb4cb" class="outline-2">
+<h2 id="org2aeb4cb"><span class="section-number-2">1</span> Introduction</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+Cats는 다양한 함수형 프로그래밍 도구들을 포함하고 있고, 개발자들이 원하는 도구를 선택해서 쓸 수 있도록 해준다. 이 도구들의 대부분은 이미 존재하는 Scala type에 적용이 가능한 type class의 형태로 제공된다.
+</p>
+
+<p>
+Type class들은 Haskell에서 시작된 프로그래밍 패턴이다. Type class들은 이미 개발된 라이브러리들이 전통적으로 사용되는 상속이나, 기존 라이브러리 소스코드의 변경 없이 새로운 기능을 확장할 수 있게 해준다.
+</p>
+
+<p>
+이 챕터에서는 Underscore의 Essential Scala 책에 있는 type class에 대해서 다시 한번 살펴보고 Cats codebase를 처음으로 살펴볼 것이다. 우리는 Show와 Eq, 두 개의 type class 예제를 통해서 이 책이 기본적으로 의지하는 패턴들을 식별할 것이다.
+</p>
+
+<p>
+우리는 type class를 다시 Scala의 함수형 프로그래밍에 대한 구조적인 접근을 대표하는 algebric data type, pattern maching, value classes, type alias와 엮으면서 마무리할 것이다
+</p>
+</div>
+
+<div id="outline-container-org2da6f6a" class="outline-3">
+<h3 id="org2da6f6a"><span class="section-number-3">1.1</span> Anatomy of a Type Class</h3>
+<div class="outline-text-3" id="text-1-1">
+<p>
+type class 패턴에서는 세가지 중요한 컴포넌트가 있다. 그것은 <i>type</i> class 그 자체, 특정 type의 <i>instance</i>, 그리고 사용자에게 노출할 <i>interface</i> method들이다.
+</p>
+</div>
+
+<div id="outline-container-org3cd4e73" class="outline-4">
+<h4 id="org3cd4e73"><span class="section-number-4">1.1.1</span> The Type Class</h4>
+<div class="outline-text-4" id="text-1-1-1">
+<p>
+<i>type</i> class는 우리가 구현하고자 하는 기능을 표현한 API 혹은 interface이다. Cats에서 type class는 최소한 하나의 type parameter를 가지는 trait으로 표현된다. 예를 들어, "JSON을 serialize한다"라는 generic한 행동을 다음과 같이 표현할 수 있다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #75715E;">// </span><span style="color: #75715E;">Define a very simple JSON AST</span>
+<span style="color: #F92672;">sealed</span> <span style="color: #F92672;">trait</span> <span style="color: #66D9EF;">Json</span>
+<span style="color: #F92672;">final</span> <span style="color: #F92672;">case</span> <span style="color: #F92672;">class</span> <span style="color: #66D9EF;">JsObject</span>(get<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Map</span>[<span style="color: #AE81FF;">String</span>, <span style="color: #AE81FF;">Json</span>]) <span style="color: #F92672;">extends</span> <span style="color: #66D9EF;">Json</span> 
+<span style="color: #F92672;">final</span> <span style="color: #F92672;">case</span> <span style="color: #F92672;">class</span> <span style="color: #66D9EF;">JsString</span>(get<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">String</span>) <span style="color: #F92672;">extends</span> <span style="color: #66D9EF;">Json</span>
+<span style="color: #F92672;">final</span> <span style="color: #F92672;">case</span> <span style="color: #F92672;">class</span> <span style="color: #66D9EF;">JsNumber</span>(get<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Double</span>) <span style="color: #F92672;">extends</span> <span style="color: #66D9EF;">Json</span>
+<span style="color: #F92672;">case</span> <span style="color: #F92672;">object</span> <span style="color: #AE81FF;">JsNull</span> <span style="color: #F92672;">extends</span> <span style="color: #66D9EF;">Json</span>
+
+<span style="color: #75715E;">// </span><span style="color: #75715E;">The "serialize to JSON" behaviour is encoded in this trait</span>
+<span style="color: #F92672;">trait</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">A</span>] {
+  <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">write</span>(value<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">A</span>)<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Json</span>
+}
+</pre>
+</div>
+
+<p>
+JsonWriter는 이 예제에서 Json과 그 subtype을 가진 우리의 type class이다. 
+</p>
+</div>
+</div>
+
+<div id="outline-container-org821711f" class="outline-4">
+<h4 id="org821711f"><span class="section-number-4">1.1.2</span> Type Class Instances</h4>
+<div class="outline-text-4" id="text-1-1-2">
+<p>
+type class의 <i>instance</i> 는 우리가 다루어야 하는 type을 위한 구현을 제공한다. 우리가 다루어야 하는 type은 Scala standara library의 type들과 우리의 도메인 모델에 있는 type을 포함한다.
+</p>
+
+<p>
+Scala에서 우리는 type class의 concrete implementation을 만들고 이에 implicit keyword를 tag함으로써 instance를 정의한다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">final</span> <span style="color: #F92672;">case</span> <span style="color: #F92672;">class</span> <span style="color: #66D9EF;">Person</span>(name<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">String</span>, email<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">String</span>)
+
+<span style="color: #F92672;">object</span> <span style="color: #AE81FF;">JsonWriterInstances</span> {
+  <span style="color: #F92672;">implicit</span> <span style="color: #F92672;">val</span> <span style="color: #FD971F;">stringWriter</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">String</span>] <span style="color: #F92672;">=</span> 
+    <span style="color: #F92672;">new</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">String</span>] {
+      <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">write</span>(value<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">String</span>)<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Json</span> <span style="color: #F92672;">=</span> <span style="color: #AE81FF;">JsString</span>(value)
+    }
+
+  <span style="color: #F92672;">implicit</span> <span style="color: #F92672;">val</span> <span style="color: #FD971F;">personWriter</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">Person</span>] <span style="color: #F92672;">=</span> 
+    <span style="color: #F92672;">new</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">Person</span>] {
+      <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">write</span>(value<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Person</span>)<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Json</span> <span style="color: #F92672;">=</span> 
+        <span style="color: #AE81FF;">JsObject</span>(<span style="color: #AE81FF;">Map</span>(
+          <span style="color: #E6DB74;">"name"</span> -&gt; <span style="color: #AE81FF;">JsString</span>(value.name),
+          <span style="color: #E6DB74;">"email"</span> -&gt; <span style="color: #AE81FF;">JsString</span>(value.email)
+        ))
+    }
+}
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org2206b22" class="outline-4">
+<h4 id="org2206b22"><span class="section-number-4">1.1.3</span> Type Class Interfaces</h4>
+<div class="outline-text-4" id="text-1-1-3">
+<p>
+type class /interface/는 우리가 사용자들에게 노출하고 하는 기능이다. Interface들은 implicit parameter로 type class의 instance를 받을 수 있는 generic method들이다.
+</p>
+
+<p>
+interface의 정의는 두가지 방법이 있다: /Interface Objects/와 /Interface Syntax/이다
+</p>
+
+<p>
+<b>Interface Objects</b>
+interface를 생성하는 가장 간단한 방법은 method를 singleton object에 두는 것이다. 
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">object</span> <span style="color: #AE81FF;">Json</span> {
+  <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">toJson</span>[<span style="color: #AE81FF;">A</span>](value<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">A</span>)(<span style="color: #F92672;">implicit</span> w<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">A</span>])<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Json</span> <span style="color: #F92672;">=</span>
+    w.write(value)
+}
+</pre>
+</div>
+
+<p>
+이 object를 사용하기 위해서, 우리가 다루는 어떤 type class instance로든지 import해서 관련 method를 호출할 수 있다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> <span style="color: #AE81FF;">JsonWriterInstances</span>.<span style="color: #F92672;">_</span>
+<span style="color: #AE81FF;">Json</span>.toJson(<span style="color: #AE81FF;">Person</span>(<span style="color: #E6DB74;">"Dave"</span>, <span style="color: #E6DB74;">"dave@example.com"</span>))
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res4: Json = JsObject(Map(name -&gt; JsString(Dave), email -&gt; JsString</span>
+     (dave<span style="color: #F92672;">@example.com</span>)))
+</pre>
+</div>
+
+<p>
+complier는 implicit parameter를 제공하지 않고 toJson method를 호출하는 지점을 잡아낸다. 그리고 compiler는 이를 고치기 위해서 관련 type의 type class instance를 찾고 이를 call하는 쪽에다가 집어넣는다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #AE81FF;">Json</span>.toJson(<span style="color: #AE81FF;">Person</span>(<span style="color: #E6DB74;">"Dave"</span>, <span style="color: #E6DB74;">"dave@example.com"</span>))(personWriter)
+</pre>
+</div>
+
+<p>
+<b>Interface Syntax</b>
+우리는 이미 interface method를 가지고 존재하는 type을 확장하기 위해서 <i>extension method/를 대신 사용할 수도 있다. Cats는 이를 type class를 위한 "/syntax</i>"라고 한다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">object</span> <span style="color: #AE81FF;">JsonSyntax</span> {
+  <span style="color: #F92672;">implicit</span> <span style="color: #F92672;">class</span> <span style="color: #66D9EF;">JsonWriterOps</span>[<span style="color: #AE81FF;">A</span>](value<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">A</span>) {
+    <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">toJson</span>(<span style="color: #F92672;">implicit</span> w<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">A</span>])<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Json</span> <span style="color: #F92672;">=</span>
+      w.write(value)
+} }
+</pre>
+</div>
+
+<p>
+우리는 우리가 필요로 하는 type의 instanced와 함께 importing하기 위해서 interface syntax를 사용한다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> <span style="color: #AE81FF;">JsonWriterInstances</span>.<span style="color: #F92672;">_</span>
+<span style="color: #F92672;">import</span> <span style="color: #AE81FF;">JsonSyntax</span>.<span style="color: #F92672;">_</span>
+
+<span style="color: #AE81FF;">Person</span>(<span style="color: #E6DB74;">"Dave"</span>, <span style="color: #E6DB74;">"dave@example.com"</span>).toJson
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res6: Json = JsObject(Map(name -&gt; JsString(Dave), email -&gt; JsString</span>
+     (dave<span style="color: #F92672;">@example.com</span>)))
+</pre>
+</div>
+
+<p>
+다시, compiler는 implicit parameter의 후보를 찾아서 집어넣어준다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #AE81FF;">Person</span>(<span style="color: #E6DB74;">"Dave"</span>, <span style="color: #E6DB74;">"dave@example.com"</span>).toJson(personWriter)
+</pre>
+</div>
+
+<p>
+The <i><b>implicitly</b></i> Method
+</p>
+
+<p>
+Scala standard library는 implicitly라고 하는 generic type class interface를 제공한다. implicitly의 정의는 매우 간단하다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">def</span> <span style="color: #A6E22E;">implicitly</span>[<span style="color: #AE81FF;">A</span>](<span style="color: #F92672;">implicit</span> value<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">A</span>)<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">A</span> <span style="color: #F92672;">=</span>
+ value
+</pre>
+</div>
+
+<p>
+우리는 implicitly를 사용해서 implicit scope에 있는 어떤 value라도 소환할 수 있다. 우리가 원하는 type을 제공하면 implicitly가 나머지는 알아서 한다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> <span style="color: #AE81FF;">JsonWriterInstances</span>.<span style="color: #F92672;">_</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">import JsonWriterInstances._</span>
+implicitly[<span style="color: #AE81FF;">JsonWriter</span>[<span style="color: #AE81FF;">String</span>]]
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res8: JsonWriter[String] = JsonWriterInstances$$anon$1@73eb1c7a</span>
+</pre>
+</div>
+
+<p>
+Cats에 있는 대부분의 type class들은 instance를 소환하기 위해 implicitly가 아닌 다른 방법으로 제공한다. 하지만 implicitly는 디버깅을 위해서는 좋은 fallback이다. 우리는 compiler가 type class의 instance를 찾는 걸 보장하기 위해서 우리 코드의 일반적인 흐름안에서 implicitly 호출을 추가함으로써 모호한 implicit error가 없는 걸 보장할 수 있다.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org38f1bf1" class="outline-3">
+<h3 id="org38f1bf1"><span class="section-number-3">1.2</span> Working with Implicits</h3>
+<div class="outline-text-3" id="text-1-2">
+<p>
+Scala에서 type class로 작업한다는 것은 implicit value와 implicit parameter와 함께 작업한다는 것을 의미한다. 이를 효과적으로 하기 위해서는 알아야할 몇가지 규칙이 있다.
+</p>
+</div>
+
+<div id="outline-container-orgbcb8f64" class="outline-4">
+<h4 id="orgbcb8f64"><span class="section-number-4">1.2.1</span> Packaging Implicits</h4>
+<div class="outline-text-4" id="text-1-2-1">
+<p>
+언어의 별난점인데, Scala에서 implicit으로 설정된 어떤 정의도 최상단이 아니라 object나 trait 안쪽에 위치해야만 한다. 위의 예제에서, 우리는 JsonWriterInstances라는 object에 있는 type class instance를 패키징했다. 우리는 companion object에 있는 type class들을 JsonWriter에 똑같이 위치시킬 수 있다. companion object에 있는 instance들을 type class에 두는 것은 Scala에서 중요한 의미를 지니는데 그 이유는 /implicit scope/라고 불리는 무언가를 그안에 넣기 때문이다. 
+</p>
+</div>
+</div>
+
+<div id="outline-container-org2b4c199" class="outline-4">
+<h4 id="org2b4c199"><span class="section-number-4">1.2.2</span> Implicit Scope</h4>
+<div class="outline-text-4" id="text-1-2-2">
+<p>
+우리가 위에서 봤듯이, compiler는 type에 의한 type class instance 후보들을 찾는다. 예를 들어, 다음의 expression에서 컴파일러는 JsonWriter[String] type의 instance를 찾을 것이다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #AE81FF;">Json</span>.toJson(<span style="color: #E6DB74;">"A string!"</span>)
+</pre>
+</div>
+
+<p>
+compiler는 호출하는 부분의 implicit scope에 있는 후보 instance들을 찾는다.
+</p>
+
+<ul class="org-ul">
+<li>local or inherited definitions;</li>
+<li>import된 defitions;</li>
+<li>type class 혹은 parameter type(이 경우에는 JsonWriter 혹은 String)의 companion object에 있는 definition</li>
+</ul>
+
+<p>
+Definition들은 만약 implicit keyword에 tag되면 implicit scope에만 포함된다. 그러므로, 만약 compiler가 여러개의 후보 definition을 본다면, compiler는 <i>ambigous implicit values</i> error와 같이 실패할 것이다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">implicit</span> <span style="color: #F92672;">val</span> <span style="color: #FD971F;">writer1</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">String</span>] <span style="color: #F92672;">=</span>
+  <span style="color: #AE81FF;">JsonWriterInstances</span>.stringWriter
+
+<span style="color: #F92672;">implicit</span> <span style="color: #F92672;">val</span> <span style="color: #FD971F;">writer2</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">String</span>] <span style="color: #F92672;">=</span>
+  <span style="color: #AE81FF;">JsonWriterInstances</span>.stringWriter
+
+<span style="color: #AE81FF;">Json</span>.toJson(<span style="color: #E6DB74;">"A string"</span>)
+<span style="color: #75715E;">// </span><span style="color: #75715E;">&lt;console&gt;:23: error: ambiguous implicit values:</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">both value stringWriter in object JsonWriterInstances of type =&gt;</span>
+     <span style="color: #AE81FF;">JsonWriter</span>[<span style="color: #AE81FF;">String</span>]
+<span style="color: #75715E;">//  </span><span style="color: #75715E;">and value writer1 of type =&gt; JsonWriter[String]</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">match expected type JsonWriter[String] // Json.toJson("A string")</span>
+<span style="color: #75715E;">//</span>
+</pre>
+</div>
+
+<p>
+implicit resolution의 간결한 규칙은 이것보다 더 복잡하지만, 이러한 복잡성은 이 책과는 크게 연관이 없다. 우리의 목적을 위해서, 우리는 네가지 방법으로 type class instance를 패키징할 수 있다.
+</p>
+
+<ul class="org-ul">
+<li>JsonWriterInstances와 같은 object에 type class를 위치시킨다</li>
+<li>trait에 type class를 위치시킨다</li>
+<li>type class의 companion에 type class를 위치시킨다</li>
+<li>parameter type의 companion object를 위치시킨다</li>
+</ul>
+
+<p>
+option 1에서 우리는 type class를 import함으로써 instance를 scope에 포함시킨다.option 2는 상속의 scope로 type class를 가져온다. option 3과 option 4에서, 우리가 쓰던 안쓰던 instance는 항상 implicit scope에 있다 
+</p>
+</div>
+</div>
+
+<div id="outline-container-orge2a97bd" class="outline-4">
+<h4 id="orge2a97bd"><span class="section-number-4">1.2.3</span> Recursive Implicit Resolution</h4>
+<div class="outline-text-4" id="text-1-2-3">
+<p>
+type class와 implicit의 힘은 후보 instance들 찾을 때 implicit definition을 조합하는 컴파일러의 능력에 의존한다.
+</p>
+
+<p>
+모든 type class instance들은 implicit vals이다. 이것은 간단하다. 우리는 두가지 방법으로 instance를 정의할 수 있다.
+</p>
+
+<ul class="org-ul">
+<li>요구되는 type을 implicit vals로서 concreate instance들을 정의해서</li>
+<li>다른 type class instance로부터 instance를 만드는 implicit method를 정의해서</li>
+</ul>
+
+<p>
+왜 우리는 다른 instance로부터 instance를 만들어낼까? Options를 위한 JsonWriter를 정의하는 것을 고려해보자. 우리는 애플리케이션에서 다루어야 하는 모든 A를 위한 JsonWriter[Option[A]]가 필요하다. 우리는 implicit vals의 라이브러리를 생성함으로써 문제를 하나하나 모두 시도해볼수도 있다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">implicit</span> <span style="color: #F92672;">val</span> <span style="color: #FD971F;">optionIntWriter</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">Option</span>[<span style="color: #AE81FF;">Int</span>]] <span style="color: #F92672;">=</span> ???
+<span style="color: #F92672;">implicit</span> <span style="color: #F92672;">val</span> <span style="color: #FD971F;">optionPersonWriter</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">Option</span>[<span style="color: #AE81FF;">Person</span>]] <span style="color: #F92672;">=</span> ???
+<span style="color: #75715E;">// </span><span style="color: #75715E;">and so on...</span>
+</pre>
+</div>
+
+<p>
+하지만, 이 접근은 확실하게 확장을 하기가 어렵다. 우리는 애플리케이션의 모든 A type을 위한 두 개 의 implicit vals를 필요로 한다: 하나는 A를 위한 것과 하나는 Option[A]를 위한것이다.
+</p>
+
+<p>
+운 좋게도, 우리는 Option[A]를 다루는 code를 A를 위한 instance에 기반한 공통의 생성자로 추상화할 수 있다.
+</p>
+
+<ul class="org-ul">
+<li>만약 option이 Some(aValue)라면, A를 위한 writer를 사용해서 aValue를 쓴다</li>
+<li>만약 option이 None이라면, null을 쓴다</li>
+</ul>
+
+<p>
+여기 implicit def로 작성한 같은 코드가 있다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">implicit</span> <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">optionWriter</span>[<span style="color: #AE81FF;">A</span>]
+(<span style="color: #F92672;">implicit</span> writer<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">A</span>])<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">Option</span>[<span style="color: #AE81FF;">A</span>]] <span style="color: #F92672;">=</span>
+  <span style="color: #F92672;">new</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">Option</span>[<span style="color: #AE81FF;">A</span>]] {
+    <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">write</span>(option<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Option</span>[<span style="color: #AE81FF;">A</span>])<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Json</span> <span style="color: #F92672;">=</span>
+      option <span style="color: #F92672;">match</span> {
+        <span style="color: #F92672;">case</span> <span style="color: #66D9EF;">Some</span>(<span style="color: #FD971F;">aValue</span>) <span style="color: #F92672;">=&gt;</span> writer.write(aValue)
+        <span style="color: #F92672;">case</span> <span style="color: #AE81FF;">None</span>         <span style="color: #F92672;">=&gt;</span> <span style="color: #AE81FF;">JsNull</span>
+} }
+</pre>
+</div>
+
+<p>
+이 메소드는 A-specific 기능을 채우기 위한 implicit parameter에 의존한 Option[A]를 위한 JsonWriter를 만들어낸다. compiler가 보는 expression은 다음과 같다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #AE81FF;">Json</span>.toJson(<span style="color: #AE81FF;">Option</span>(<span style="color: #E6DB74;">"A string"</span>))
+</pre>
+</div>
+
+<p>
+copiler는 implicit JsonWriter[Option[String]]을 찾는다. 그리고 JsonWriter[Option[A]]를 위한 implicit method를 찾게 된다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #AE81FF;">Json</span>.toJson(<span style="color: #AE81FF;">Option</span>(<span style="color: #E6DB74;">"A string"</span>))(optionWriter[<span style="color: #AE81FF;">String</span>])
+</pre>
+</div>
+
+<p>
+그리고 recursive하게 optionWriter의 parameter로 사용하기 위해서 JsonWriter[String]를 찾아낸다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #AE81FF;">Json</span>.toJson(<span style="color: #AE81FF;">Option</span>(<span style="color: #E6DB74;">"A string"</span>))(optionWriter(stringWriter))
+</pre>
+</div>
+
+<p>
+이러한 경우, implicit resolution은 정확한 모든 type의 type class을 소환하는 조합을 찾기 위해서 implicit definition의 가능한 조합을 모두 찾게 된다
+</p>
+
+<pre class="example">
+Implicit Conversions
+
+implicit def를 사용하는 type class instance constructor를 생성할 때, implicit parameters로서 parameter를 method에 전달하는 것을 보장해야 한다. 이 keyword가 없다면, compiler는 implicit 처리 시에 parameter들을 채울 수 없을 것이다.
+
+non-implicit parameter와 같이 있는 implicit method는 implicit conversion이라고 불리는 다른 scala pattern을 만들어낸다. implicit conversion은 현대의 scala code에서 얼굴을 찌푸리게 하는 오래된 programming pattern이다. 운 좋게도, compiler는 이렇게 사용하려고 하면 경고할 것이다. scala.language.implicitConversions를 import하면 implicit conversion을 수동으로 사용가능하게 할 수 있다.
+
+</pre>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">implicit</span> <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">optionWriter</span>[<span style="color: #AE81FF;">A</span>]
+(writer<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">A</span>])<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">JsonWriter</span>[<span style="color: #AE81FF;">Option</span>[<span style="color: #AE81FF;">A</span>]] <span style="color: #F92672;">=</span>
+???
+<span style="color: #75715E;">// </span><span style="color: #75715E;">&lt;console&gt;:18: warning: implicit conversion method optionWriter should be enabled</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">by making the implicit value scala.language.</span>
+     implicitConversions visible.
+<span style="color: #75715E;">// </span><span style="color: #75715E;">This can be achieved by adding the import clause 'import scala.language.implicitConversions'</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">or by setting the compiler option -language:</span>
+     implicitConversions.
+<span style="color: #75715E;">// </span><span style="color: #75715E;">See the Scaladoc for value scala.language.implicitConversions for a discussion</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">why the feature should be explicitly enabled.</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">// //</span>
+       <span style="color: #F92672;">implicit</span> <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">optionWriter</span>[<span style="color: #AE81FF;">A</span>]
+                    ^
+error<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">No</span> warnings can be incurred under -<span style="color: #AE81FF;">Xfatal</span>-warnings.
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-org3920556" class="outline-3">
+<h3 id="org3920556"><span class="section-number-3">1.3</span> Exercise: Printable Library</h3>
+<div class="outline-text-3" id="text-1-3">
+<p>
+생략
+</p>
+</div>
+</div>
+
+<div id="outline-container-org67ce2f7" class="outline-3">
+<h3 id="org67ce2f7"><span class="section-number-3">1.4</span> Meet Cats</h3>
+<div class="outline-text-3" id="text-1-4">
+<p>
+이전 섹션에서 Scala에서 어떻게 type class를 구현하는지 봤다. 이 섹션에서는 Cats에서 어떻게 type class를 구현하는지 볼 것이다. 
+</p>
+
+<p>
+Cats는 우리가 원하는 대로 사용할 수 있는 어떤 type class, instance, interface method든 선택할 수 있게 해주는 modular 구조를 사용해서 작성되었다. 첫번째로 cats.Show를 사용한 예제를 살펴보자
+</p>
+
+<p>
+Show는 이전 섹션에서 정의한 Printable type class의 Cats 버전이다. Show는 toString을 사용하지 않고 개발자 친화적인 console output을 위한 매커니즘을 제공한다. 다음은 생략된 definition이다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">package</span> <span style="color: #E6DB74;">cats</span>
+
+<span style="color: #F92672;">trait</span> <span style="color: #66D9EF;">Show</span>[<span style="color: #AE81FF;">A</span>] {
+  <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">show</span>(value<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">A</span>)<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">String</span>
+}
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org8529c2e" class="outline-4">
+<h4 id="org8529c2e"><span class="section-number-4">1.4.1</span> Importing Type Classes</h4>
+<div class="outline-text-4" id="text-1-4-1">
+<p>
+Cats에서 type class들은 cats package에 정의된다. 이 패키지로부터 바로 Show를 import할 수 있다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> cats.<span style="color: #AE81FF;">Show</span>
+</pre>
+</div>
+
+<p>
+모든 Cats의 companion object는 우리가 정의하는 어떤 type의 instance도 가지고 있는 apply method를 가지고 있다:
+</p>
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">val</span> <span style="color: #FD971F;">showInt</span> <span style="color: #F92672;">=</span> <span style="color: #AE81FF;">Show</span>.apply[<span style="color: #AE81FF;">Int</span>]
+<span style="color: #75715E;">// </span><span style="color: #75715E;">&lt;console&gt;:13: error: could not find implicit value for parameter</span>
+instance<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">cats</span>.<span style="color: #AE81FF;">Show</span>[<span style="color: #AE81FF;">Int</span>]
+<span style="color: #75715E;">// </span><span style="color: #75715E;">val showInt = Show.apply[Int] //</span>
+</pre>
+</div>
+
+<p>
+Oops - 동작하지 않는군요! apply method는 각각의 instance들을 찾기 위해 /implicit/을 사용한다. 그래서 몇몇 instance들을 scope로 가져올 것이다
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgd2cda5f" class="outline-4">
+<h4 id="orgd2cda5f"><span class="section-number-4">1.4.2</span> Importing Default Instances</h4>
+<div class="outline-text-4" id="text-1-4-2">
+<p>
+cats.instances package는 넓은 범위의 type을 위해 default instance를 제공한다. 다음의 table에서 보여지는 것들을 import할 수 있다. 각 import는 특정 parameter type을 위한 모든 Cats't type class들의 instance를 제공한다
+</p>
+
+<ul class="org-ul">
+<li>cats.instances.int는 Int를 위한 instance를 제공한다.</li>
+<li>cats.instances.string는 String을 위한 instance를 제공한다.</li>
+<li>cats.instances.list는 List를 위한 instance를 제공한다</li>
+<li>cats.instances.option은 Option을 위한 instance를 제공한다.</li>
+<li>cats.instances.all은 Cats와 함께 포함된 모든 instance를 제공한다.</li>
+</ul>
+
+<p>
+cats.instances package는 가능한 import의 완벽한 목록을 참고해라
+</p>
+
+<p>
+Int와 String을 위한 Show의 instance를 import해보자
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> cats.instances.int.<span style="color: #F92672;">_</span>    <span style="color: #75715E;">// </span><span style="color: #75715E;">for Show</span>
+<span style="color: #F92672;">import</span> cats.instances.string.<span style="color: #F92672;">_</span> <span style="color: #75715E;">// </span><span style="color: #75715E;">for Show</span>
+
+<span style="color: #F92672;">val</span> <span style="color: #FD971F;">showInt</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Show</span>[<span style="color: #AE81FF;">Int</span>] <span style="color: #F92672;">=</span> <span style="color: #AE81FF;">Show</span>.apply[<span style="color: #AE81FF;">Int</span>] 
+<span style="color: #F92672;">val</span> <span style="color: #FD971F;">showString</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Show</span>[<span style="color: #AE81FF;">String</span>] <span style="color: #F92672;">=</span> <span style="color: #AE81FF;">Show</span>.apply[<span style="color: #AE81FF;">String</span>]
+</pre>
+</div>
+
+<p>
+더 나아진 것 같다! Show의 두 instance에 접근할 수 있으며 Ints와 Strings를 출력하기 위해서 이들을 사용할 수 있다:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">val</span> <span style="color: #FD971F;">intAsString</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">String</span> <span style="color: #F92672;">=</span>
+  showInt.show(<span style="color: #AE81FF;">123</span>)
+<span style="color: #75715E;">// </span><span style="color: #75715E;">intAsString: String = 123</span>
+<span style="color: #F92672;">val</span> <span style="color: #FD971F;">stringAsString</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">String</span> <span style="color: #F92672;">=</span>
+  showString.show(<span style="color: #E6DB74;">"abc"</span>)
+<span style="color: #75715E;">// </span><span style="color: #75715E;">stringAsString: String = abc</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org4f0d344" class="outline-4">
+<h4 id="org4f0d344"><span class="section-number-4">1.4.3</span> Importing Interface Syntax</h4>
+<div class="outline-text-4" id="text-1-4-3">
+<p>
+우리는 cats.syntax.show로부터 interface syntax를 import해서 Show를 더 편하게 사용할 수 있도록 할 수 있다. cats.syntax.show는 모든 타입을 위한 show라고 불리는 extension method를 추가한다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> cats.syntax.show.<span style="color: #F92672;">_</span> <span style="color: #75715E;">// </span><span style="color: #75715E;">for show</span>
+<span style="color: #F92672;">val</span> <span style="color: #FD971F;">shownInt</span> <span style="color: #F92672;">=</span> <span style="color: #AE81FF;">123.</span>show
+<span style="color: #75715E;">// </span><span style="color: #75715E;">shownInt: String = 123</span>
+<span style="color: #F92672;">val</span> <span style="color: #FD971F;">shownString</span> <span style="color: #F92672;">=</span> <span style="color: #E6DB74;">"abc"</span>.show
+<span style="color: #75715E;">// </span><span style="color: #75715E;">shownString: String = abc</span>
+</pre>
+</div>
+
+<p>
+Cats는 각 type class를 위한 분리된 syntax import를 제공한다. 이후에 섹션과 챕터에서 이러한 것들을 소개하겠다.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org9d739d5" class="outline-4">
+<h4 id="org9d739d5"><span class="section-number-4">1.4.4</span> Importing All The Things!</h4>
+<div class="outline-text-4" id="text-1-4-4">
+<p>
+이 책에서 우리는 각 예제에서 필요로 하는 instance와 syntax를 정확히 보여주기 위해서 정확한 import를 사용할 것이다. 하지만, 이런 방식은 많은 경우 시간이 들 수 있다. import를 간단하게 하기 위한 다음의 shortcut 중 하나를 편하게 사용해도 된다.
+</p>
+
+<ul class="org-ul">
+<li>import cats.<sub>는</sub> Cats의 type class를 모두 import한다.</li>
+<li>import cats.instance.all.<sub>는</sub> standard library르 위한 type class instance 모두를 import한다</li>
+<li>import cats.syntax.all.<sub>는</sub> syntax 모두를 import한다</li>
+<li>import cats.implicits.<sub>는</sub> 모든 syntax와 standard type class instance 모두를 import한다</li>
+</ul>
+
+<p>
+대부분의 사람들이 다음의 import로 파일을 시작한다. 이 import는 이름 충돌이나 모호한 implicit 문제가 있을 때에만 더 구체적인 import로 돌릴 수 있다. 
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> cats.<span style="color: #F92672;">_</span>
+<span style="color: #F92672;">import</span> cats.implicits.<span style="color: #F92672;">_</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org953d866" class="outline-4">
+<h4 id="org953d866"><span class="section-number-4">1.4.5</span> Defining Custom Instances</h4>
+<div class="outline-text-4" id="text-1-4-5">
+<p>
+주어진 type을 위한 trait을 구현하는 것에 의해서 간단히 Show의 instance를 정의할 수 있다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> java.util.<span style="color: #AE81FF;">Date</span>
+<span style="color: #F92672;">implicit</span> <span style="color: #F92672;">val</span> <span style="color: #FD971F;">dateShow</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Show</span>[<span style="color: #AE81FF;">Date</span>] <span style="color: #F92672;">=</span>
+  <span style="color: #F92672;">new</span> <span style="color: #66D9EF;">Show</span>[<span style="color: #AE81FF;">Date</span>] {
+    <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">show</span>(date<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Date</span>)<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">String</span> <span style="color: #F92672;">=</span>
+      s<span style="color: #E6DB74;">"</span><span style="color: #FD971F;">${date.getTime}</span><span style="color: #E6DB74;">ms since the epoch."</span>
+}
+</pre>
+</div>
+
+<p>
+하지만, Cats는 프로세스를 간단하게 하는 편리한 method들을 제공한다. 자체적인 type을 위한 instance를 정의하기 위해서 사용하는 Show의 companion object에 있는 두가지 construction method가 있다. 
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">object</span> <span style="color: #AE81FF;">Show</span> {
+  <span style="color: #75715E;">// </span><span style="color: #75715E;">Convert a function to a `Show` instance:</span>
+  <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">show</span>[<span style="color: #AE81FF;">A</span>](f<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">A</span> <span style="color: #F92672;">=&gt;</span> <span style="color: #AE81FF;">String</span>)<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Show</span>[<span style="color: #AE81FF;">A</span>] <span style="color: #F92672;">=</span>
+  ???
+  <span style="color: #75715E;">// </span><span style="color: #75715E;">Create a `Show` instance from a `toString` method:</span>
+  <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">fromToString</span>[<span style="color: #AE81FF;">A</span>]<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Show</span>[<span style="color: #AE81FF;">A</span>] <span style="color: #F92672;">=</span>
+  ???
+}
+</pre>
+</div>
+
+<p>
+이러한 것들은 바닥부터 이를 정의하는 것보다 훨씬 더 적은 노력으로 빠르게 instance를 생성할 수 있도록 한다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">implicit</span> <span style="color: #F92672;">val</span> <span style="color: #FD971F;">dateShow</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Show</span>[<span style="color: #AE81FF;">Date</span>] <span style="color: #F92672;">=</span>
+<span style="color: #AE81FF;">Show</span>.show(date <span style="color: #F92672;">=&gt;</span> s<span style="color: #E6DB74;">"</span><span style="color: #FD971F;">${date.getTime}</span><span style="color: #E6DB74;">ms since the epoch."</span>)
+</pre>
+</div>
+
+<p>
+보다시피, construction method를 사용하는 code는 code가 거의 없을 정도록 훨씬 간결하다. Cats에 있는 많은 type class는 instance를 생성할 수 있는 이런 helper method를 제공하며 이 method들은 바닥부터 하거나 혹은 이미 존재하는 instance를 다른 type으로 transform할 수 있게 한다.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgd65f191" class="outline-4">
+<h4 id="orgd65f191"><span class="section-number-4">1.4.6</span> Exercise: Cat Show</h4>
+<div class="outline-text-4" id="text-1-4-6">
+<p>
+생략
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgcf0c667" class="outline-3">
+<h3 id="orgcf0c667"><span class="section-number-3">1.5</span> Example: Eq</h3>
+<div class="outline-text-3" id="text-1-5">
+<p>
+또다른 유용한 type class를 살펴보고 이 챕터를 마무리하겠다. 바로 cats.Eq이다. Eq는 type-safe equality를 지원하고 Scala의 built-in == 연산자를 사용할 때 짜증나는 부분에 집중한다. 
+</p>
+
+<p>
+대부분 모든 Scala 개발자는 이전에는 다음과 같이 코드를 작성했다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"> <span style="color: #AE81FF;">List</span>(<span style="color: #AE81FF;">1</span>, <span style="color: #AE81FF;">2</span>, <span style="color: #AE81FF;">3</span>).map(<span style="color: #AE81FF;">Option</span>(<span style="color: #F92672;">_</span>)).filter(item <span style="color: #F92672;">=&gt;</span> item == <span style="color: #AE81FF;">1</span>)
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res0: List[Option[Int]] = List()</span>
+</pre>
+</div>
+
+<p>
+좋다, 많은 사람들은 다음과 같은 실수를 하지 않을 수 있지만, 그 원칙은 타당하다. filter clause의 predicate는 항상 false를 리턴한다. 왜냐하면 Int와 Option[Int]를 비교하기 때문이다.
+</p>
+
+<p>
+이것은 프로그래머 에러이다 - item을 1 대신에 Some(1)과 비교해야만 한다. 하지만, 이건 기술적으로 type error가 아니다. 왜냐하면 ==는 우리가 비교하는 어떤 type이든 어떤 객체와든 동작해야 하기 때문이다. Eq는 equality check와 이 문제를 잘 동작하게 하기 위해서 몇가지 type safety를 추가하기 위해 설계되었다.
+</p>
+</div>
+
+<div id="outline-container-org610901f" class="outline-4">
+<h4 id="org610901f"><span class="section-number-4">1.5.1</span> Equality, Liberty, and Fraternity</h4>
+<div class="outline-text-4" id="text-1-5-1">
+<p>
+우리는 Eq를 모든 주어진 type간의 type-safe equality를 정의하기 위해서 사용할 수 있다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">package</span> <span style="color: #E6DB74;">cats</span>
+<span style="color: #F92672;">trait</span> <span style="color: #66D9EF;">Eq</span>[<span style="color: #AE81FF;">A</span>] {
+  <span style="color: #F92672;">def</span> <span style="color: #A6E22E;">eqv</span>(a<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">A</span>, b<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">A</span>)<span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Boolean</span>
+  <span style="color: #75715E;">// </span><span style="color: #75715E;">other concrete methods based on eqv...</span>
+}
+</pre>
+</div>
+
+<p>
+cats.syntax.eq에 정의된 interface syntax는 해당 scope에 있는 Eq[A] instance의 quality check를 위한 두가지 method를 제공한다.
+</p>
+
+<ul class="org-ul">
+<li>===는 두 개의 object를 비교한다</li>
+<li>=!=는 두 개의 object가 다른지를 비교한다</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org255d6d4" class="outline-4">
+<h4 id="org255d6d4"><span class="section-number-4">1.5.2</span> Comparing Ints</h4>
+<div class="outline-text-4" id="text-1-5-2">
+<p>
+몇가지 예를 살펴보자. 우선 type class를 import해보자
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> cats.<span style="color: #AE81FF;">Eq</span>
+</pre>
+</div>
+
+<p>
+이제 Int인 instance를 설정해보자
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> cats.instances.int.<span style="color: #F92672;">_</span> <span style="color: #75715E;">// </span><span style="color: #75715E;">for Eq</span>
+
+<span style="color: #F92672;">val</span> <span style="color: #FD971F;">eqInt</span> <span style="color: #F92672;">=</span> <span style="color: #AE81FF;">Eq</span>[<span style="color: #AE81FF;">Int</span>]
+</pre>
+</div>
+
+<p>
+이제 eqInt를 이용해서 바로 equality를 테스트할 수 있다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala">eqInt.eqv(<span style="color: #AE81FF;">123</span>, <span style="color: #AE81FF;">123</span>)
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res2: Boolean = true</span>
+eqInt.eqv(<span style="color: #AE81FF;">123</span>, <span style="color: #AE81FF;">234</span>)
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res3: Boolean = false</span>
+</pre>
+</div>
+
+<p>
+Scala의 == method와 다르게, 만약 eqv를 사용해서 서로 다른 type의 object를 비교하려고 하면 compile error를 보게 된다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala">eqInt.eqv(<span style="color: #AE81FF;">123</span>, <span style="color: #E6DB74;">"234"</span>)
+<span style="color: #75715E;">// </span><span style="color: #75715E;">&lt;console&gt;:18: error: type mismatch; // found : String("234")</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">required: Int</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">eqInt.eqv(123, "234")</span>
+<span style="color: #75715E;">//</span>
+</pre>
+</div>
+
+<p>
+또한 <code>==와 =!</code> method를 사용하기 위해 cats.syntax.eq에 있는 interface syntax를 import해보자
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> cats.syntax.eq.<span style="color: #F92672;">_</span> <span style="color: #75715E;">// </span><span style="color: #75715E;">for === and =!=</span>
+
+<span style="color: #AE81FF;">123</span> === <span style="color: #AE81FF;">123</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res5: Boolean = true</span>
+<span style="color: #AE81FF;">123</span> =!= <span style="color: #AE81FF;">234</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res6: Boolean = true</span>
+</pre>
+</div>
+
+<p>
+다시, 서로 다른 type의 값을 비교하면 compile error가 발생한다
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgf9fa0b5" class="outline-4">
+<h4 id="orgf9fa0b5"><span class="section-number-4">1.5.3</span> Comparing Options</h4>
+<div class="outline-text-4" id="text-1-5-3">
+<p>
+자..이제 더욱 재미있는 예제르 살펴보자. 바로 Option[Int]이다. Option[Int]인 type의 값을 비교하기 위해서 우리는 Int뿐만 아니라 Option을 위한 Eq의 instance도 import해보자
+</p>
+
+<p>
+Int:
+</p>
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> cats.instances.int.<span style="color: #F92672;">_</span>    <span style="color: #75715E;">// </span><span style="color: #75715E;">for Eq</span>
+<span style="color: #F92672;">import</span> cats.instances.option.<span style="color: #F92672;">_</span> <span style="color: #75715E;">// </span><span style="color: #75715E;">for Eq</span>
+</pre>
+</div>
+
+<p>
+이제 몇가지 비교를 해보자
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #AE81FF;">Some</span>(<span style="color: #AE81FF;">1</span>) === <span style="color: #AE81FF;">None</span>
+<span style="color: #75715E;">// </span><span style="color: #75715E;">&lt;console&gt;:26: error: value === is not a member of Some[Int] // Some(1) === None</span>
+<span style="color: #75715E;">//</span>
+</pre>
+</div>
+
+<p>
+type이 맞지 않기 때문에 error를 받았다. Int와 Option[Int]의 Eq instance들이 있지만, 비교하는 값들은 Some[Int] type의 값이다. 이 문제를 해결하기 위해서 Option[Int]로서의 argument를 다시 작성해야 한다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala">(<span style="color: #AE81FF;">Some</span>(<span style="color: #AE81FF;">1</span>) <span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Option</span>[<span style="color: #AE81FF;">Int</span>]) === (<span style="color: #AE81FF;">None</span> <span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Option</span>[<span style="color: #AE81FF;">Int</span>])
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res9: Boolean = false</span>
+</pre>
+</div>
+
+<p>
+standard library에 있는 Option.apply와 Option.empty를 이용해서 좀 더 친숙한 방식으로 할 수 있다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #AE81FF;">Option</span>(<span style="color: #AE81FF;">1</span>) === <span style="color: #AE81FF;">Option</span>.empty[<span style="color: #AE81FF;">Int</span>]
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res10: Boolean = false</span>
+</pre>
+</div>
+
+<p>
+혹은 cats.syntax.option에 있는 특별한 syntax를 사용할 수도 있다
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> cats.syntax.option.<span style="color: #F92672;">_</span> <span style="color: #75715E;">// </span><span style="color: #75715E;">for some and none</span>
+<span style="color: #AE81FF;">1.</span>some === none[<span style="color: #AE81FF;">Int</span>]
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res11: Boolean = false</span>
+<span style="color: #AE81FF;">1.</span>some =!= none[<span style="color: #AE81FF;">Int</span>]
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res12: Boolean = true</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org72a52b5" class="outline-4">
+<h4 id="org72a52b5"><span class="section-number-4">1.5.4</span> Comparing Custom Types</h4>
+<div class="outline-text-4" id="text-1-5-4">
+<p>
+Eq를 이용해서 Eq의 instance를 정의할수도 있다. (A,A) =&gt; Boolean type의 함수를 받아서 Eq[A]를 리턴하는 걸 정의해보자:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scala"><span style="color: #F92672;">import</span> java.util.<span style="color: #AE81FF;">Date</span>
+<span style="color: #F92672;">import</span> cats.instances.long.<span style="color: #F92672;">_</span> <span style="color: #75715E;">// </span><span style="color: #75715E;">for Eq</span>
+
+<span style="color: #F92672;">implicit</span> <span style="color: #F92672;">val</span> <span style="color: #FD971F;">dateEq</span><span style="color: #F92672;">:</span> <span style="color: #66D9EF;">Eq</span>[<span style="color: #AE81FF;">Date</span>] <span style="color: #F92672;">=</span>
+  <span style="color: #AE81FF;">Eq</span>.instance[<span style="color: #AE81FF;">Date</span>] { (date1, date2) <span style="color: #F92672;">=&gt;</span>
+    date1.getTime === date2.getTime
+  }
+
+<span style="color: #F92672;">val</span> <span style="color: #FD971F;">x</span> <span style="color: #F92672;">=</span> <span style="color: #F92672;">new</span> <span style="color: #66D9EF;">Date</span>() <span style="color: #75715E;">// </span><span style="color: #75715E;">now</span>
+<span style="color: #F92672;">val</span> <span style="color: #FD971F;">y</span> <span style="color: #F92672;">=</span> <span style="color: #F92672;">new</span> <span style="color: #66D9EF;">Date</span>() <span style="color: #75715E;">// </span><span style="color: #75715E;">a bit later than now</span>
+
+x === x
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res13: Boolean = true</span>
+
+x === y
+<span style="color: #75715E;">// </span><span style="color: #75715E;">res14: Boolean = false</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgb5c9f3b" class="outline-4">
+<h4 id="orgb5c9f3b"><span class="section-number-4">1.5.5</span> Exercise: Equality, Liberty, and Felinity</h4>
+<div class="outline-text-4" id="text-1-5-5">
+<p>
+생략
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orge3d40d5" class="outline-3">
+<h3 id="orge3d40d5"><span class="section-number-3">1.6</span> Controlling Instance Selection</h3>
+<div class="outline-text-3" id="text-1-6">
+<p>
+type class를 사용할 때에는 instance를 선택하는 데 있어 두가지 이슈를 고려해야만 한다
+</p>
+
+<ul class="org-ul">
+<li>type에 정의된 instance와 subtype간의 관계는 어떻게 되는가?</li>
+</ul>
+<p>
+예를 들어 만약 우리가 JsonWriter[Option[Int]]를 정의했다면, Json.toJson(Some(1))은 이 instance를 선택할 것인가(Some은 Option의 subtype이라는 것을 기억하자)
+</p>
+<ul class="org-ul">
+<li>많은 type class instance들이 있을 때 어떻게 선택할 것인가?</li>
+</ul>
+<p>
+만약 Person을 위한 JsonWriter가 두개라면? Json.toJson(aPerson)이라는 코드는 어떤 instance를 선택할 것인가??
+</p>
+</div>
+
+<div id="outline-container-org19db62c" class="outline-4">
+<h4 id="org19db62c"><span class="section-number-4">1.6.1</span> Variance</h4>
+<div class="outline-text-4" id="text-1-6-1">
+<p>
+type class를 정의할 때에는, type class의 variance에 영향을 
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org31b2fd9" class="outline-3">
+<h3 id="org31b2fd9"><span class="section-number-3">1.7</span> Summary</h3>
+<div class="outline-text-3" id="text-1-7">
+<p>
+이 챕터에서는 type class를 처음 살펴보았다. Cats의 Show와 Eq를 이용한 두가지 예제를 살펴보기 전에 plain Scala를 사용한 Printable type class를 구현해봤다.
+</p>
+
+<p>
+우리는 Cats type class에 있는 일반적인 패턴을 보아왔다.
+</p>
+<ul class="org-ul">
+<li>type class자체는 cats package에 있는 generic trait이다.</li>
+<li>각 type class는 instance를 materialize할 수 있는 apply method를 가지고 있는 companion object를 가지고 있다. apply method는 instance를 만들기 위한 하나 혹은 그 이상의 /constructor/와 관련된 helper method들을 가지고 있다.</li>
+<li>Default instance들은 cats.instances 패키지에서 object를 통해서 제공되고 type class에서 보다 parameter type에 의해서 구성된다.</li>
+<li>많은 type class들은 cats.syntax package를 통해 제공되는 /syntax/를 가진다.</li>
+</ul>
+
+<p>
+Part 1의 남은 챕터에서는 몇몇 폭넓고 강력한 type class를 살펴볼 것이다 - Semigroup, Monoid, Functor, Semigroupal, Applicative, Traverse 등등이다. 각각의 경우에 대해서 우리는 type class가 제공하는 기능과 따르고 있는 규칙들과 어떻게 Cats에 구현되어 있는 지를 배울 것이다. 이 type class들 중에 많은 부분은 Show나 Eq보다 더 추상화되어 있다. 이러한 부분이 배우기 더 어렵게 하기도 하지만 우리의 코드에 있는 일반적인 문제들을 푸는데 훨씬 더 유용하게 해준다.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org1ea7686" class="outline-2">
+<h2 id="org1ea7686"><span class="section-number-2">2</span> Monoids and Semigroups</h2>
+<div class="outline-text-2" id="text-2">
+</div>
+<div id="outline-container-orged73da5" class="outline-3">
+<h3 id="orged73da5"><span class="section-number-3">2.1</span> Definition of a Monoid</h3>
+</div>
+<div id="outline-container-org169f375" class="outline-3">
+<h3 id="org169f375"><span class="section-number-3">2.2</span> Definition of a Semigroup</h3>
+</div>
+<div id="outline-container-org4afafbf" class="outline-3">
+<h3 id="org4afafbf"><span class="section-number-3">2.3</span> Exercise: The Truth About Monoids</h3>
+</div>
+<div id="outline-container-orgd3e11af" class="outline-3">
+<h3 id="orgd3e11af"><span class="section-number-3">2.4</span> Exercise: All Set for Monoids</h3>
+</div>
+<div id="outline-container-org3a94918" class="outline-3">
+<h3 id="org3a94918"><span class="section-number-3">2.5</span> Monoids in Cats</h3>
+<div class="outline-text-3" id="text-2-5">
+</div>
+<div id="outline-container-orgabcfa4f" class="outline-4">
+<h4 id="orgabcfa4f"><span class="section-number-4">2.5.1</span> The Monoid Type Class</h4>
+</div>
+<div id="outline-container-org8864098" class="outline-4">
+<h4 id="org8864098"><span class="section-number-4">2.5.2</span> Monoid Instances</h4>
+</div>
+<div id="outline-container-org3838b3d" class="outline-4">
+<h4 id="org3838b3d"><span class="section-number-4">2.5.3</span> Monoid Syntax</h4>
+</div>
+<div id="outline-container-org426a793" class="outline-4">
+<h4 id="org426a793"><span class="section-number-4">2.5.4</span> Exercise: Adding All The Things</h4>
+</div>
+</div>
+<div id="outline-container-org9c04030" class="outline-3">
+<h3 id="org9c04030"><span class="section-number-3">2.6</span> Application of Monoids</h3>
+<div class="outline-text-3" id="text-2-6">
+</div>
+<div id="outline-container-org7efcd27" class="outline-4">
+<h4 id="org7efcd27"><span class="section-number-4">2.6.1</span> Big Data</h4>
+</div>
+<div id="outline-container-orgc22c361" class="outline-4">
+<h4 id="orgc22c361"><span class="section-number-4">2.6.2</span> Distributed Systems</h4>
+</div>
+<div id="outline-container-orgb0cdb52" class="outline-4">
+<h4 id="orgb0cdb52"><span class="section-number-4">2.6.3</span> Monoids in the Small</h4>
+</div>
+</div>
+<div id="outline-container-orgc84ae04" class="outline-3">
+<h3 id="orgc84ae04"><span class="section-number-3">2.7</span> Summary</h3>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: billy.angels</p>
+<p class="date">Created: 2018-08-05 Sun 22:58</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
