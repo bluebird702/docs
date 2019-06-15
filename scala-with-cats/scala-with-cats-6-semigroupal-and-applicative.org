@@ -303,13 +303,246 @@ def product[M[_]: Monad, A, B](x: M[A], y: M[B]): M[(A, B)] = ???
 #+END_SRC
 
 ** Validated
+이제 =Either= 의 fail-fast 에러 핸들링을 살펴봤다. 추가적으로, =Either= 는 monad이기 때문에, =product= 의 맥락이 =flatMap= 의 그것과 같다는 것을 알 수 있다. 사실, 이 두가지 메소드의 일관성을 깨지 않고 에러를 모으는 맥락을 구현한 monadic data type을 디자인하는 것은 불가능하다. 
+
+운 좋게도, Cats는 =Semigroupal= 의 인스턴스를 가지지만 =Monad= 의 인스턴스는 가지지 않는 =Validated= 라고 불리는 data type을 제공한다. =product= 의 구현은 그러므로 에러들을 모으는 것이 자유롭다: 
+
+#+BEGIN_SRC scala
+import cats.Semigroupal
+import cats.data.Validated
+import cats.instances.list._ // for Monoid
+type AllErrorsOr[A] = Validated[List[String], A]
+Semigroupal[AllErrorsOr].product(
+  Validated.invalid(List("Error 1")),
+  Validated.invalid(List("Error 2"))
+)
+// res1: AllErrorsOr[(Nothing, Nothing)] = Invalid(List(Error 1, Error 2))
+#+END_SRC 
+
+=Validated= 는 =Either= 를 훌륭하게 보완한다. 이 둘에 대해서 에러 처리의 공통적인 방법을 모두 지원한다: fail-fast와 accumulating
+
 *** Creating Instances of Validated
+=Validated= 는 두가지 subtype을 가지고 있다. =Validated.Valid= 와 =Validated.Invalid=. 이 둘은 느슨하게 =Right= 와 =Left= 에 대응된다. 이 타입의 인스턴스를 만드는 많은 방법들이 있다. =apply= method를 이용해서 직접적으로 인스턴스를 만들 수 있다:
+
+#+BEGIN_SRC scala
+val v = Validated.Valid(123)
+// v: cats.data.Validated.Valid[Int] = Valid(123)
+val i = Validated.Invalid(List("Badness"))
+// i: cats.data.Validated.Invalid[List[String]] = Invalid(List(Badness))
+#+END_SRC
+
+하지만, 때로는 return type을 =Validated= 로 확장하게 하는 =valid= 와 =invalid= smart constructor를 사용하는 것이 더 쉽다.
+#+BEGIN_SRC scala
+val v = Validated.valid[List[String], Int](123)
+// v: cats.data.Validated[List[String],Int] = Valid(123)
+val i = Validated.invalid[List[String], Int](List("Badness"))
+// i: cats.data.Validated[List[String],Int] = Invalid(List(Badness))
+#+END_SRC 
+
+네 번째 방법으로 cats.syntax.applicative와 cats.syntax.applicativeError에 있는 =pure= 와 =raiseError= 를 사용할 수 있다
+#+BEGIN_SRC scala
+import cats.syntax.applicative._ // for pure 
+import cats.syntax.applicativeError._ // for raiseError
+
+type ErrorsOr[A] = Validated[List[String], A]
+
+123.pure[ErrorsOr]
+// res5: ErrorsOr[Int] = Valid(123)
+
+List("Badness").raiseError[ErrorsOr, Int]
+// res6: ErrorsOr[Int] = Invalid(List(Badness))
+#+END_SRC
+
+마지막으로 다른 소스로부터 =Validated= 의 인스턴스를 생성할 수 있는 helper method가 있다. =Try=, =Either=, =Option= 의 인스턴스 뿐만 아니라, =Exception= 들로부터 생성할 수 있다. 
+
+#+BEGIN_SRC scala
+Validated.catchOnly[NumberFormatException]("foo".toInt)
+// res7: cats.data.Validated[NumberFormatException,Int] = Invalid(java.lang.NumberFormatException: For input string: "foo")
+
+Validated.catchNonFatal(sys.error("Badness"))
+// res8: cats.data.Validated[Throwable,Nothing] = Invalid(java.lang.RuntimeException: Badness)
+
+Validated.fromTry(scala.util.Try("foo".toInt))
+// res9: cats.data.Validated[Throwable,Int] = Invalid(java.lang.NumberFormatException: For input string: "foo")
+
+Validated.fromEither[String, Int](Left("Badness"))
+// res10: cats.data.Validated[String,Int] = Invalid(Badness)
+
+Validated.fromOption[String, Int](None, "Badness")
+// res11: cats.data.Validated[String,Int] = Invalid(Badness)
+#+END_SRC
+
 *** Combining Instances of Validated
-*** Methods of Validated
+=Semigroupal= 에 대해 설명된 method 혹은 문법의 어떤 것을 사용해서는 =Validated= 의 인스턴스들을 조합할 수 있다. 
+
+이 테크닉들 모두 scope 안에서의 =Semigroupal= 인스턴스를 필요로 한다. =Either= 처럼, =Semigroupal= 을 위한 파라미터의 정확한 수를 가진 type constructor를 생성하기 위한 error type을 수정할 필요가 있다
+
+#+BEGIN_SRC scala
+type AllErrorsOr[A] = Validated[String, A]
+#+END_SRC
+
+=Validated= 는 =Semigroup= 을 이용해서 error를 모으므로, =Semigroupal= 을 소환하기 위한 scope 내에 하나를 필요로 한다. 만약 호출하는 쪽에서 =Semigroup= 이 보이지 않으면, 짜증나게 도움이 안되는 컴파일 에러를 보게 될 것이다:
+
+#+BEGIN_SRC scala
+Semigroupal[AllErrorsOr]
+// <console>:28: error: could not find implicit value for parameter instance: cats.Semigroupal[AllErrorsOr]
+//        Semigroupal[AllErrorsOr]
+//  
+#+END_SRC 
+
+일단 에러 타입을 위해서 =Semigroup= 을 import하면, 모든 것이 원하는 대로 동작한다
+#+BEGIN_SRC scala
+import cats.instances.string._ // for Semigroup
+
+Semigroupal[AllErrorsOr]
+// res13: cats.Semigroupal[AllErrorsOr] = cats.data. ValidatedInstances$$anon$1@7be29203
+#+END_SRC 
+
+컴파일러가 정확한 타입의 =Semigroupal= 을 소환하기 위해 scope 내에 모든 implicit들을 가지고 있는한, 우리가 좋아하는 방식으로 에러를 모아주는 다른 =Semigroupal= 메소드나 문법을 적용할 수 있다.
+
+#+BEGIN_SRC scala
+import cats.syntax.apply._ // for tupled
+(
+  "Error 1".invalid[Int],
+  "Error 2".invalid[Int]
+).tupled
+// res14: cats.data.Validated[String,(Int, Int)] = Invalid(Error 1 Error 2)
+#+END_SRC
+
+보다시피, =String= 은 에러를 모으기 위해 이상적인 타입이 아니다. 일반적으로 =List= 나 =Vector= 를 대신 사용한다
+
+#+BEGIN_SRC scala
+import cats.instances.vector._ // for Semigroupal 
+
+(
+  Vector(404).invalid[Int],
+  Vector(500).invalid[Int]
+).tupled
+// res15: cats.data.Validated[scala.collection.immutable.Vector[Int],(Int, Int)] = Invalid(Vector(404, 500))
+#+END_SRC
+
+=cats.data= package는 최소한 하나의 에러라도 없어서 실패하지 않는 =NonEmptyList= 와 =NonEmptyVector= 도 제공한다.
+
+#+BEGIN_SRC scala
+import cats.data.NonEmptyVector
+(
+NonEmptyVector.of("Error 1").invalid[Int],
+NonEmptyVector.of("Error 2").invalid[Int]
+).tupled
+ // res16: cats.data.Validated[cats.data.NonEmptyVector[String],(Int, Int)] = Invalid(NonEmptyVector(Error 1, Error 2))
+#+END_SRC   
+
+*** Validated의 메소드들(Methods of Validated)
+=Validated= 는 cats.syntax.either를 포함해서 =Either= 를 위해 사용되는 것과 비슷한 메소드들을 가지고 있다. valid와 invalid 내에서 값을 transform하기 위해서 =map=, =leftMap=, =bimap= 을 사용할 수 있다:
+
+#+BEGIN_SRC scala
+123.valid.map(_ * 100)
+// res17: cats.data.Validated[Nothing,Int] = Valid(12300)
+
+"?".invalid.leftMap(_.toString)
+// res18: cats.data.Validated[String,Nothing] = Invalid(?)
+
+123.valid[String].bimap(_ + "!", _ * 100)
+// res19: cats.data.Validated[String,Int] = Valid(12300)
+
+"?".invalid[Int].bimap(_ + "!", _ * 100)
+// res20: cats.data.Validated[String,Int] = Invalid(?!)
+#+END_SRC 
+
+=Validated= 는 monad가 아니기 떄문에 =flatMap= 을 할 수는 없다. 하지만 =toEither= 와 =toValidated= 메소드를 사용해서 =Validated= 와 =Either= 간의 변환을 할 수 있다. =toValidated= 는 [cats.syntax.either]에 있다.
+
+#+BEGIN_SRC scala
+import cats.syntax.either._ // for toValidated
+// import cats.syntax.either._
+
+"Badness".invalid[Int]
+// res21: cats.data.Validated[String,Int] = Invalid(Badness)
+
+"Badness".invalid[Int].toEither
+// res22: Either[String,Int] = Left(Badness)
+
+"Badness".invalid[Int].toEither.toValidated
+// res23: cats.data.Validated[String,Int] = Invalid(Badness)
+#+END_SRC
+
+=withEither= 메소드를 사용해서 일시적으로 =Either= 로 변환하고 다시 뒤로 돌릴수도 있다.
+#+BEGIN_SRC scala
+ 41.valid[String].withEither(_.flatMap(n => Right(n + 1)))
+// res24: cats.data.Validated[String,Int] = Valid(42)
+#+END_SRC 
+
+cats.syntax.either에 =withValidated= 메소드도 있다.
+
+=Either= 와 같이, predicate가 유지되지 않으면 특정한 에러로 실패하는 =ensure= 메소드를 사용할 수 있다
+#+BEGIN_SRC scala
+// 123.valid[String].ensure("Negative!")(_ > 0)
+#+END_SRC
+
+마지막으로 =Valid= 와 =Invalid= 에서 값들을 뽑아내기 위해서 =getOrElse= 나 =fold= 를 호출 할 수 있다
+#+BEGIN_SRC scala
+"fail".invalid[Int].getOrElse(0)
+// res26: Int = 0
+
+"fail".invalid[Int].fold(_ + "!!!", _.toString) 
+// res27: String = fail!!!
+#+END_SRC 
+
 *** Exercise: Form Validation
 
 ** Apply and Applicative
-*** The Hierarchy of Sequencing Type Classes
+Semigroupal은 더 폭넓은 functional programing 세계에서 자주 언급되지는 않는다. Semigroupal은 /applicative functor/ 라고 불리는 관련 타입 클래스의 기능들의 subset을 제공한다.
+
+=Semigroupal= 과 =Applicative= 는 효과적으로 컨텍스트를 합치는데 같은 notion의 대안적은 encoding을 효과적으로 제공한다. 이 두가지 encoding들은 Conor Mcbride와 Ross Paterson의 2008년 논문에서 소개되었다. 
+
+Cats는 applicative를 두가지 타입 클래스를 이용해서 모델링했다. 첫번째는 =Semigroupal= 과 =Functor= 를 상속하고, 컨텍스트 내에서 함수에 parameter를 적용하는 ap method를 추가한 cats.Apply이다. 두번째는 =Apply= 를 상속하고, Chapter 4에서 소개한 =pure= 메소드를 추가한 cats.Applicative이다. 다음은 간단한 정의를 나타낸 코드이다. 
+
+#+BEGIN_SRC scala
+trait Apply[F[_]] extends Semigroupal[F] with Functor[F] { 
+  def ap[A, B](ff: F[A => B])(fa: F[A]): F[B]
+  
+  def product[A, B](fa: F[A], fb: F[B]): F[(A, B)] =
+    ap(map(fa)(a => (b: B) => (a, b)))(fb)
+}
+
+trait Applicative[F[_]] extends Apply[F] {
+  def pure[A](a: A): F[A]
+}
+#+END_SRC
+
+이를 좀 더 자세히 살펴보면, ap 메소드는 context F[_]에서 fa라는 파라미터를 함수 ff에 적용한다. =Semigroupal= 에 있는 =product= 메소드는 =ap= 와 =map= 의 관점에서 정의된다.
+
+product의 구현에 대해서는 너무 걱정할 필요 없다 - 읽기 어려운데 자세한 건 그리 중요하지 않다. 핵심은 =product=, =ap=, =map= 간의 관계가 매우 긴밀해서 어떤 것이든 그 외의 다른 두개의 관점에서 정의되도록 해놓았다는 것이다.
+
+=Applicative= 는 =pure= 메소드를 소개한다. =Monad= 에서 본 =pure= 와 똑같다. =pure= 메소드는 unwrapped value로 새로운 applicative 인스턴스를 만들어낸다. 이와 같이 =Applicative= 는 =Semigroup= 과 관련된 =Monoid= 로서의 =Apply= 와 관계되어 있다.
+
+*** 연속된 타입클래스의 계층구조(The Hierarchy of Sequencing Type Classes)
+=Apply= 와 =Applicative= 의 소개에서, 좀 더 떨어져서 서로 다른 방법으로 연속된 computation과 연관된 타입 클래스들의 전체적인 패밀리를 볼 수 있다. Fiture 6.1은 이 책에서 다루는 타입 클래스 간의 관계를 보여준다. 
+
+계층 구조에서 각 타입 클래스는 연속된 sematic의 특정 집합을 대표하고, 특징적인 메소드들의 집합을 소개하며, 해당 타입 클래스의 관점에서 상위 타입의 functionality를 저장한다
+
+- 모든 monad는 applicative이다
+- 모든 applicative는 semigroupal이다
+- 기타 등등..
+
+타입 클래스들 간의 관계에 대한 lawful nature 때문에, 상속 관계는 타입 클래스의 모든 인스턴스들에 대해 변하지 않는다. =Apply= 는 =ap= 와 =map= 의 관점에서 =product= 를 정의한다; =Monad= 는 =pure= 와 =flatMap= 의 관점에서 =product= , =ap= , =map= 을 정의한다.
+
+이를 설명하기 위해서 두가지 가상의 데이터 타입을 고려해보자:
+
+- =Foo= 는 monad이다. =Foo= 는 =pure= 와 =flatMap= 을 구현하고 =product=, =map=, =ap= 의 표준 정의를 상속한 =Monad= 타입 클래스의 인스턴스를 가진다
+- =Bar= 는 applicative functor이다. =Bar= 는 =pure= 와 =ap= 를 구현하고 =product= 와 =map= 의 표준 정의를 상속한 =Applicative= 의 인스턴스를 가진다.
+
+구현에 대해서 더 알지 않아도 두가지 데이터 타입들에 대해서 이야기할 수 있을까?
+
+우리는 =Bar= 보다 더 =Foo= 에 대해서 잘 안다; =Monad= 는 =Applicative= 의 subtype이기 때문에 =Bar= 에서 보장할 수 없는 속성들을 =Foo= 에서는 보장할 수 있다(예를 들면 =flatMap=). 반대로 =Bar= 는 =Foo= 보다 더 넓은 범위의 동작을 가질 수 있다는 걸 알 수 있다. =Bar= 는 따라야 할 규칙이 더 적고(=flatMap= 이 없다) =Foo= 가 할 수 없는 동작을 구현할 수 있다.
+
+이는 힘 대 제약의 고전적인 트레이드오프를 증명한다(수학적인 측면에서). 데이터 타입에 제약이 많으면 많을 수록, 데이터 타입의 동작을 더 보장할 수 있다. 하지만 더 적은 동작을 모델링할 수 있다.
+
+Monad는 이 트레이드 오프에서 sweet spot에서 일어난다. Monad는 더 넓은 범위의 동작을 모델링하기에 충분히 유연하고 그 동작들을 강하게 보장하기에 충분히 제한적이다. 하지만 monad가 적합하지 않은 상황도 있다. 때때로 타이 음식을 원하는 경우, 부리토는 만족을 못시킬 것이다.
+
+monad가 모델링하고 있는 compuation의 엄격한 sequencing을 강요하는 반면에, applicative와 semigroupal은 그 와 같은 제약사항을 강요하지 않는다. 이는 이들을 계층구조에서 서로 다른 sweet spot으로 가져간다. 우리는 applicatvie와 semigroupal를 이용해서 monad는 할 수 없는 병렬적이며 독립적인 computation을 하는 클래스를 표현할 수 있다.
+
+데이터 구조를 선택하는 것은 semantic을 선택하는 것이다. 만약 monad를 선택하면 엄격한 sequencing을 할 수 있다. 만약 applicative를 선택하면 flatMap의 기능을 잃는다. 이는 일관성 법칙에 의해서 강요되는 trade-off이다. 그러니 타입을 신중하게 선택해라!  
+ 
 
 ** Summary
 monad와 functor는 이 책에서 다룬 data type들을 sequencing하는 데 가장 넓게 사용되고 있지만, semigroupal과 applicative는 가장 일반적이다. 이 type class들은 context안에서 함수를 적용하고 값을 조합할 수 있는 일반적인 메커니즘을 제공한다.
