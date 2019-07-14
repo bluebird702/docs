@@ -1,0 +1,109 @@
+#+STARTUP: showall
+#+LATEX_CLASS: article
+#+LATEX_CLASS_OPTIONS: [a4paper]
+#+LATEX_HEADER: \usepackage{kotex}
+#+LATEX_HEADER: \usepackage{CJKutf8}
+#+LATEX_HEADER: \usepackage[utf8]{inputenc}
+#+LATEX_HEADER: \usepackage{amsmath}
+#+LATEX_HEADER: \usepackage[scale=0.75,twoside,bindingoffset=5mm]{geometry}
+#+LATEX_HEADER: \usepackage[onehalfspacing]{setspace}
+#+LATEX_HEADER: \usepackage{longtable}
+#+AUTHOR: billy.angels
+#+TITLE: Scala with Cats
+
+
+* 8.Case Study: Testing Asynchronous Code
+
+바로 case study를 시작해보자: 어떻게 asyncronous code들을 synchronous하게 만들어서 유닛 테스트를 간단하게 만들수 있는지 살펴보자.
+
+서버들의 uptime을 측정했던 Chapter 7의 예제로 돌아가보자. 우리는 코드에 더 복잡한 구조를 붙여볼 것이다. 두 개의 컴포넌트가 있다. 첫번째는 원격 서버들로부터 uptime을 땡겨오는 =UptimeClient= 이다:
+
+#+BEGIN_SRC scala
+import scala.concurrent.Future
+
+trait UptimeClient {
+  def getUptime(hostname: String): Future[Int]
+}
+#+END_SRC 
+
+서버들의 리스트를 유지하고 사용자가 전체 uptime을 가져오는 =UptimeService= 도 있다. 
+#+BEGIN_SRC scala
+import cats.instances.future._ // for Applicative 
+import cats.instances.list._ // for Traverse 
+import cats.syntax.traverse._ // for traverse
+import scala.concurrent.ExecutionContext.Implicits.global
+
+class UptimeService(client: UptimeClient) {
+  def getTotalUptime(hostnames: List[String]): Future[Int] =
+    hostnames.traverse(client.getUptime).map(_.sum) 
+}
+#+END_SRC
+
+우리는 =UptimeClient= 를 trait로 했는데 이유는 유닛 테스트에서 스텁으로 만들고 싶기 때문이다. 예를 들어 실제 서버를 호출하지 않고 더미 데이터를 제공하는 테스트 클라이언트를 작성할 수 있다. 
+#+BEGIN_SRC scala
+class TestUptimeClient(hosts: Map[String, Int]) extends UptimeClient { 
+  def getUptime(hostname: String): Future[Int] =
+    Future.successful(hosts.getOrElse(hostname, 0)) 
+}
+#+END_SRC
+
+이제, =UptimeService= 를 위한 유닛 테스트를 작성해보자. 서버로부터 값을 가져오는 것보다는 값들을 sum하는 기능을 테스트해보고 싶다. 다음이 그 예이다:
+
+#+BEGIN_SRC scala
+def testTotalUptime() = {
+  val hosts = Map("host1" -> 10, "host2" -> 6)
+  val client = new TestUptimeClient(hosts)
+  val service = new UptimeService(client)
+  val actual = service.getTotalUptime(hosts.keys.toList) 
+  val expected = hosts.values.sum
+  
+  assert(actual == expected)
+}
+// <console>:31: warning: scala.concurrent.Future[Int] and Int are unrelated: they will most likely never compare equal
+// assert(actual == expected)
+// ^
+// error: No warnings can be incurred under -Xfatal-warnings.
+#+END_SRC
+코드는 고전적인 에러 때문에 컴파일되지 않을 것이다. 우리의 코드가 asynchronous란 사실을 깜빡했다. 우리의 =actual= 은 =Future[Int]= 타입의 결과이고 =expected= 는 =Int= 타입이다. 이 둘은 직접적으로 비교를 할 수가 없다.
+이 문제를 해결하기 위한 몇가지 방법들이 있다. 우리 테스트 코드를 asyncrhonous하도록 변경할 수도 있다. 하지만 또다른 방안이 있다. 우리의 서비스코드를 synchronous하게 해서 수정없이 돌아가게 하는 것이다!
+
+** 8.1 Abstracting over Type Constructors
+=UptimeClient= 의 두가지 버전을 구현할 필요가 있다: production에서 사용할 asynchronous한 버전과 유닛테스트에서 사용할 synchronous한 버전이다.
+#+BEGIN_SRC scala
+trait RealUptimeClient extends UptimeClient {
+  def getUptime(hostname: String): Future[Int]
+}
+
+trait TestUptimeClient extends UptimeClient {
+  def getUptime(hostname: String): Int
+}
+#+END_SRC
+여기서 질문은 : 어떤 result type이 =UptimeClient= 에서 제공되어야 하는 abstract method type인가? =Future[Int]= 와 =Int= 를 추상화할 필요가 있다:
+
+#+BEGIN_SRC scala
+trait UptimeClient {
+  def getUptime(hostname: String): ???
+}
+#+END_SRC
+
+일단 이는 어려워보인다. 테스트 코드에서 각 타입의 =Int= 부분을 남기고 =Future= 부분을 "날려버리고" 싶다. 운좋게도, Cats는 Section 4.3에서 논의한 /identity type/, =Id= 의 관점의 해결책을 제공한다. =Id= 는 의미를 바꾸지 않고 type constructor에서 "wrap" 타입을 허용할 수 있도록 한다. 
+
+#+BEGIN_SRC scala
+package cats
+
+type Id[A] = A
+#+END_SRC   
+=Id= 는 =UptimeClient= 의 return type들을 추상화할 수 있게 한다. 이제 구현해보자:
+- type constructor F[_]를 파라미터로 받을 수 있는 =UptimeClient= 의 정의를 작성한다
+- =F= 를 =Future= 와 =Id= 에 바인드하는 =RealUptimeClient= 와 =TestUptimeClient= 를 상속하자;
+- 컴파일이 됨을 증명하기 위한 각각의 경우의 =getUptime= 을 위한 method signature를 작성하자;
+
+이전의 =Map[String, Int]= 에 기반한 full class로  
+ 
+** 8.2 Abstracting over Monads
+=UptimeService= 로 주의를 돌려보자. =UptimeClient= 의 두가지 형식을 추상화할 수 있도록 재작성할 필요가 있다. 우리는 이를 두단계로 수행할 것이다. 첫번째로 클래스와 method signature를 다시 작성하고, method body를 재작성할 것이다. method signature부터 시작해보자
+- 
+
+
+** 8.3 Summary
+이 case study는 어떻게 Cats가 서로 다른 computational scenario를 추상화를 도와주는 지를 알려주는 예이다. =Applicative= 타입 클래스는 asynchronous와 synchronous 코드를 추상화하는 데 사용된다. functional abstraction에 의존하는 것은 구현의 상세한 부분에 대해서 걱정할 필요 없이 수행하고 자 하는 computation의 sequence를 정의할 수 있도록 해준다.
