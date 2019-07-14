@@ -12,16 +12,139 @@
 #+TITLE: Scala with Cats
 
 
-
 * 7.Foldable and Traverse
+
+이 챕터에서는 collection에서 iteration을 가져오는 두 가지 타입 클래스를 살펴볼 것이다.
+
+- =Foldable= 은 =foldLeft= 와 =foldRight= 동작에 친숙하게 추상화한다
+- =Traverse= 는 =Applicative= 를 사용해서 folding보다 덜 고통스럽게 순회할 수 있게 하는 고차원적인 추상화이다
+
+=Foldable= 을 살펴보는 것을 시작으로 folding이 더 복잡하게 되고 =Traverse= 가 더 편리하게 되는 예들을 살펴볼 것이다.
+
 ** Foldable 
+=Foldable= 타입 클래스는 =Lists=, =Vectors=, =Streams= 와 같은 sequence들에서 사용되는 =foldLeft= 와 =foldRight= 를 capture한다. =Foldable= 을 사용하면, 다양한 sequence type과도 동작할 수 있는 generic한 fold를 작성할 수 있다. 또 새로운 sequence를 발명하고 이 sequence들을 코드에 끼워넣을 수 있다. =Foldable= 은 =Monoids= 와 =Eval= 모나드에 대한 훌륭한 유즈 케이스를 제공한다.
+ 
 *** Folds and Folding
+folding의 일반적인 개념을 빠르게 되짚어 보는 것으로 시작하자. /accumulator/ 값이 있고 sequence의 각 아이템을 그 값과 조합하는 /binary function/ 을 만들어보자:
+
+#+BEGIN_SRC scala
+def show[A](list: List[A]): String = 
+  list.foldLeft("nil")((accum, item) => s"$item then $accum")
+
+show(Nil)
+// res0: String = nil
+
+show(List(1, 2, 3))
+// res1: String = 3 then 2 then 1 then nil
+#+END_SRC  
+
+=foldLeft= 메소드는 sequence를 재귀적으로 탐색한다. 우리의 binary 함수는 각 아이템에 대해서 반복적으로 호출되고 다음을 위한 accumulator과 되는 각 호출의 결과가 된다. sequence의 끝에 도달했을 때 마지막 accumulator는 마지막 결과값이 된다. 
+우리가 수행하는 동작에 의존해서, 우리가 fold하는 순서는 중요하다. 이 순서로 인해서 fold의 두가지 표준 변종(variants)이 있다.
+
+- =foldLeft= 는 "왼쪽"에서 "오른쪽"으로 순회한다(시작에서 끝으로);
+- =foldRight= 는 "오른쪽"에서 "왼쪽"으로 순회한다(끝에서 시작으로);
+
+Figure 7.1은 각 방향을 설명한다.
+
+=foldLeft= 와 =foldRight= 는 우리의 binary operation이 교환법칙(commutative)이 성립한다면 동일하다. 예를 들어, 우리가 어떤 방향이든 간에 folding을 해서 =List[Int]= 값을 sum한다고 해보자. 0을 우리의 accumulator로 사용하고 더하기를 우리의 동작으로 하면..
+
+#+BEGIN_SRC scala
+List(1, 2, 3).foldLeft(0)(_ + _)
+// res2: Int = 6
+
+List(1, 2, 3).foldRight(0)(_ + _)
+// res3: Int = 6
+#+END_SRC
+
+file:./images/Figure7.1.png
+
+만약 우리가 교환법칙이 성립하지 않는 operator를 제공하면 평가의 순서는 달라지게 된다. 예를 들어, 만약 빼기를 사용해서 folding을 하게 되면 각 방향마다 서로 다른 결과값을 가지게 된다:
+#+BEGIN_SRC scala
+List(1, 2, 3).foldLeft(0)(_ - _)
+// res4: Int = -6
+
+List(1, 2, 3).foldRight(0)(_ - _)
+// res5: Int = 2
+#+END_SRC
+
 *** Exericse: Reflecting on Folds
 *** Exericse: Scaf-fold-ing Other Methods
 *** Foldable in Cats
+Cats의 =Foldable= 은 =foldLeft= 와 =foldRight= 을 타입클래스로 추상화한다. =Foldable= 의 인스턴스는 이 두가지 메소드를 정의하고 derived 메소드의 host를 상속한다. Cats는 편리한 Scala 데이터 타입들을 위한 =Foldable= 의 out-of-the-box를 제공한다: =List= , =Vector= , =Stream= , =Option=
+우리는 =Foldable.apply= 를 사용해서 인스턴스를 소환할 수 있고 =foldLeft= 의 구현을 바로 호출할 수 있다. 다음은 =List= 를 사용한 예제이다:
+
+#+BEGIN_SRC scala
+import cats.Foldable
+import cats.instances.list._ // for Foldable
+
+val ints = List(1, 2, 3)
+
+Foldable[List].foldLeft(ints, 0)(_ + _)
+// res1: Int = 6
+#+END_SRC
+
+=Vector= 와 =Stream= 같은 sequence들도 동일한 방식으로 동작한다. 0 혹은 하나의 원소를 가지는 sequence라고도 볼 수 있는 =Option= 을 사용한 예제는 다음과 같다:
+
+#+BEGIN_SRC scala
+import cats.instances.option._ // for Foldable
+
+val maybeInt = Option(123)
+
+Foldable[Option].foldLeft(maybeInt, 10)(_ * _)
+// res3: Int = 1230
+#+END_SRC
+
 **** Folding Right
+=Foldable= 은 =Eval= 모나드의 관점에서 =foldLeft= 와 다르게 =foldRight= 를 정의한다:
+#+BEGIN_SRC scala
+def foldRight[A, B](fa: F[A], lb: Eval[B])
+                     (f: (A, Eval[B]) => Eval[B]): Eval[B]
+#+END_SRC 
+
+=Eval= 은 folding이 항상 /stack safe/ 하다는 것을 의미한다. 심지어 collection의 default =foldRight= 가 그렇지 않다고 해도 말이다. 예를 들어 =Stream= 의 =foldRight= 의 기본 구현은 stack safe하지 않다. stream이 길어지면 길어질수록, fold를 위한 stack 요구사항은 더 커진다. 너무 큰 stream은 =StackOverflowError= 를 발생시킨다:
+#+BEGIN_SRC scala
+import cats.Eval
+import cats.Foldable
+
+def bigData = (1 to 100000).toStream
+
+bigData.foldRight(0L)(_ + _)
+// java.lang.StackOverflowError ...
+#+END_SRC   
+
+=Foldable= 을 사용하면 overflow exception을 고치도록 stack safe operation을 강제할 수 있다.
+#+BEGIN_SRC scala
+import cats.instances.stream._ // for Foldable
+
+val eval: Eval[Long] =
+  Foldable[Stream].
+    foldRight(bigData, Eval.now(0L)) { (num, eval) =>
+      eval.map(_ + num)
+}
+
+eval.value
+// res7: Long = 5000050000
+#+END_SRC 
+
+#+BEGIN_QUOTE
+표준 라이브러리에서의 Stack Safety
+
+Stack safety는 표준 라이브러리를 쓸 때에는 일반적으로 문제가 되지 않는다. 가장 일반적으로 사용되는 =List= 와 =Vector= 와 같은 collection 타입들은 =foldRight= 의 stack safe 구현을 제공한다:
+
+(1 to 100000).toList.foldRight(0L)(_ + _)
+// res8: Long = 5000050000
+
+(1 to 100000).toVector.foldRight(0L)(_ + _)
+// res9: Long = 5000050000
+
+우리는 =Stream= 을 제외했는데..왜냐하면 이 룰에서 예외이기 때문이다. 우리가 사용하는 데이터 타입이 어떤 것이든 간에 =Eval= 이 뒤에 있다는 것을 아는 것은 유용하다 
+#+END_QUOTE
+
 **** Folding with Monoids
+=Foldable= 은 =foldLeft= 의  
+
 **** Syntax for Foldable
+
 ** Traverse
 *** Traversing with Futures
 *** Traversing with Applicatives
@@ -29,7 +152,11 @@
 **** Exercise: Traversing with Options
 **** Exercise: Traversing with Validated
 *** Traverse in Cats
+
 ** Summary
+이 챕터에서는 sequence들을 순회하는 두 가지 타입 클래스인 =Foldable= 과 =Traverse= 를 소개했다.
+=Foldable= 은 표준 라이브러리에 있는 collection으로 알려진 =foldLeft= 와 =foldRight= 를 추상화한다. =Foldable= 은 이 메소드들이 나머지 데이터 타입에도 사용하기 좋도록 stack-safe한 구현을 추가하고, 상황적으로 유용한 기능들을 추가한 호스트를 정의한다. 다시 말해서, =Foldable= 은 우리가 이미 알고 있지 않은 것들을 소개하고 있지는 않다는 뜻이다.
+=Traverse= 로부터 얻을 수 있는 진정한 힘은 우리가 알고 있는 =Future= 의 =traverse= 와 =sequence= 메소드를 추상화하고 일반화할 수 있다는 것이다. 이 메소드들을 이용해서 =Traverse= 의 인스턴스인 모든 F와 =Applicative= 의 인스턴스인 모든 G에 대해서  =F[G[A]]= 를 =G[F[A]]= 로 변환할 수 있게 해준다. 코드의 라인을 줄이는 관점에서, =Traverse= 는 이 책에서 가장 강력한 패턴 중에 하나이다. 우리는 많은 라인의 =fold= 를 하나의 =foo.traverse= 로 줄일 수 있다. 
 
 
 
