@@ -141,17 +141,253 @@ Stack safety는 표준 라이브러리를 쓸 때에는 일반적으로 문제�
 #+END_QUOTE
 
 **** Folding with Monoids
-=Foldable= 은 =foldLeft= 의  
+=Foldable= 은 =foldLeft= 의 위에 정의된 유용한 메소드들의 host를 제공한다. 이 메소드들 중에 많은 부분은 표준 라이브러리에 익숙한 메소드들이다: =find=, =exists=, =forall=, =toList=, =isEmpty=, =nonEmpty= 등등:
 
+#+BEGIN_SRC scala
+Foldable[Option].nonEmpty(Option(42))
+// res10: Boolean = true
+
+Foldable[List].find(List(1, 2, 3))(_ % 2 == 0)
+// res11: Option[Int] = Some(2)
+#+END_SRC 
+
+이 친숙한 메소드들에 추가적으로, Cats는 =Monoids= 를 사용하게 만드는 두가지 메소드를 제공한다:
+
+- =combineAll= (과 그 alias인 =fold=)은 =Monoid= 를 사용한 sequence에서의 모든 원소들을 조합한다;
+- =foldMap= 은 sequence에 걸쳐 사용자가 만든 function으로 map하고 =Monoid= 를 사용한 결과를 조합한다.
+
+예를 들어, =List[Int]= 전체를 sum하기 위해서 =combineAll= 을 사용할 수 있다:
+#+BEGIN_SRC scala
+import cats.instances.int._ // for Monoid
+
+Foldable[List].combineAll(List(1, 2, 3))
+// res12: Int = 6
+#+END_SRC
+
+대안으로, 우리는 각 =Int= 에서 =String= 으로 변환하고 그 둘을 합치기 위해서 =foldMap= 을 사용할 수 있다:
+
+#+BEGIN_SRC scala
+import cats.instances.string._ // for Monoid
+
+Foldable[List].foldMap(List(1, 2, 3))(_.toString)
+// res13: String = 123
+#+END_SRC
+
+마지막으로, 중첩 sequence의 deep traversal을 지원하기 위해서 =Foldable= 을 compose할 수 있다:
+#+BEGIN_SRC scala
+import cats.instances.vector._ // for Monoid
+
+val ints = List(Vector(1, 2, 3), Vector(4, 5, 6))
+
+(Foldable[List] compose Foldable[Vector]).combineAll(ints)
+// res15: Int = 21
+#+END_SRC
 **** Syntax for Foldable
+=Foldable= 의 모든 메소드는 cats.syntax.foldable을 통한 문법으로 사용할 수 있다. 각 경우에서, =Foldable= 에서의 메소드에 첫번째 인자는 method 호출의 receiver가 될 수 있다:
+#+BEGIN_SRC scala
+import cats.syntax.foldable._ // for combineAll and foldMap 
+
+List(1, 2, 3).combineAll
+// res16: Int = 6
+
+List(1, 2, 3).foldMap(_.toString)
+// res17: String = 123
+#+END_SRC
+
 
 ** Traverse
+=foldLeft= 와 =foldRight= 는 유연한 iteration 메소드들이지만 accumulator와 combinator function을 정의하기 위해서 많은 작업을 요구한다. =Traverse= type class는 iteration을 위해서 더 편리하고 더 규칙적인 패턴을 제공하기 위해서 Applicative를 leverage하는 고차원적인 툴이다. 
 *** Traversing with Futures
+Scala 표준 라이브러리에 있는 =Future.traverse= 와 =Future.sequence= 를 사용한 =Traverse= 를 증명할 수 있다. 이 메소드들은 traverse pattern의 Future-specific한 구현을 제공한다. 예로서, uptime을 위해 host로부터 poll하는 메소드와 server hostname의 리스트를 가지고 있다고 해보자:
+
+#+BEGIN_SRC scala
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
+
+val hostnames = List(
+  "alpha.example.com",
+  "beta.example.com",
+  "gamma.demo.com"
+)
+
+def getUptime(hostname: String): Future[Int] =
+  Future(hostname.length * 60) // just for demonstration
+#+END_SRC
+
+이제, 모든 host들로부터 poll하고 uptime을 가져오고 싶다고 해보자. 결과(=List[Future[Int]]=)가 하나 이상의 =Future= 를 가지고 있기 때문에 hostname들에 간단하게 map을 할 수 없다. 결과값을 우리가 block할 수 있는 값을 얻을 수 있는 하나의 =Future= 로 줄여야할 필요가 있다. fold를 써서 수동으로 해보자:
+#+BEGIN_SRC scala
+val allUptimes: Future[List[Int]] = 
+  hostnames.foldLeft(Future(List.empty[Int])) {
+    (accum, host) =>
+      val uptime = getUptime(host)
+      for {
+        accum  <- accum
+        uptime <- uptime
+      } yield accum :+ uptime
+}
+
+Await.result(allUptimes, 1.second)
+#+END_SRC 
+
+직관적으로, =hostnames= 를 순회하고, 각 아이템에 대해서 =func= 를 호출하고, 결과값들을 하나의 list로 합쳤다. 이는 간단해보이지만 코드가 상당히 다루기 불편하다. 왜냐하면 매 순회 때마다 =Future= 들을 생성하고 합성해야 하기 때문이다. 우리는 이 패턴에 있어 안성맞춤인 =Future.traverse= 를 사용해서 훨씬 더 코드를 개선할 수 있다:
+
+#+BEGIN_SRC scala
+val allUptimes: Future[List[Int]] =
+  Future.traverse(hostnames)(getUptime)
+
+Await.result(allUptimes, 1.second)
+// res3: List[Int] = List(1020, 960, 840)
+#+END_SRC
+
+위의 코드는 훨씬 더 명확하고 간결하다. 어떻게 동작하는 지 살펴보자. 만약 =CanBuildFrom= 과 =ExecutionContext= 같은 집중을 방해하는 요소들을 무시한다면, 표준 라이브러리의 =Future.traverse= 의 구현은 다음과 같다
+
+#+BEGIN_SRC scala
+def traverse[A, B](values: List[A])
+    (func: A => Future[B]): Future[List[B]] =
+  values.foldLeft(Future(List.empty[A])) { (accum, host) => 
+    val item = func(host)
+    for {
+      accum <- accum
+      item  <- item
+    } yield accum :+ item
+  }
+#+END_SRC
+
+이 코드는 위에 있는 예제 코드가 거의 같다. =Future.traverse= 는 folding, accumulator의 정의, 함수의 합성에 대한 고통을 추상화시켜준다. =Future.traverse= 는 우리가 원하는 동작을 하는 깔끔한 고수준의 인터페이스를 제공한다
+- List[A]로 시작한다;
+- function A => Future[B]를 제공한다;
+- Future[List[B]]로 끝난다.
+
+표준 라이브러리는 또한 다른 method를 제공한다. 바로 =Future.sequence= 이다. =Future.sequence= 는 =List[Future[B]]= 와 같이 시작하고 identity function을 제공할 필요가 없다.
+
+#+BEGIN_SRC scala
+object Future {
+  def sequence[B](futures: List[Future[B]]): Future[List[B]] =
+    traverse(futures)(identity)
+  // etc...
+}
+#+END_SRC
+
+=Future.traverse= 와 =Future.sequence= 는 매우 특정한 문제를 해결한다. 이 함수들은 =Future= 의 sequence를 순회하고, 결과값을 accumulate할 수 있게 해준다. 위의 간단하게 만든 예제는 =List= 와만 동작하고 있지만, 실제의 =Future.traverse= 와 =Future.sequence= 는 모든 표준 스칼라 collection과 동작한다.
+Cats의 Traverse 타입 클래스는 이런 패턴을 모든 =Applicative= 타입(=Future=, =Option=, =Validated= 등)과 동작할 수 있도록 일반화한다. 우리는 다음 섹션에서 두 단계로 =Traverse= 에 접근할 것이다: 첫번째로 =Applicative= 로 일반화할 것이고, sequence type으로 일반화할 것이다. 그리고 sequence와 다른 데이터 타입을 포함해서 많은 동작들을 필요 없게 만드는 극단적으로 가치 있는 툴로 마무리 할 것이다.   
+
 *** Traversing with Applicatives
+좀 더 자세히 살펴보면, =Applicative= 관점에서 =traverse= 를 재작성할 수 있다. 위에 있는 예제의 accumulator는:
+#+BEGIN_SRC scala
+Future(List.empty[Int])
+#+END_SRC
+
+이고 이는 =Applicative.pure= 와 같다. 
+
+#+BEGIN_SRC scala
+import cats.Applicative
+import cats.instances.future._ // for Applicative 
+import cats.syntax.applicative._ // for pure
+
+List.empty[Int].pure[Future]
+#+END_SRC
+
+combinater는 다음과 같았다:
+#+BEGIN_SRC scala
+def oldCombine(
+  accum : Future[List[Int]],
+  host  : String
+): Future[List[Int]] = {
+  val uptime = getUptime(host)
+  for {
+    accum  <- accum
+    uptime <- uptime
+  } yield accum :+ uptime
+}
+#+END_SRC
+
+그리고 combinator는 =Semigroupal.combine= 과 같다
+#+BEGIN_SRC scala
+import cats.syntax.apply._ // for mapN
+
+// Combining accumulator and hostname using an Applicative:
+def newCombine(accum: Future[List[Int]], host: String): Future[List[Int]] =
+  (accum, getUptime(host)).mapN(_ :+ _)
+#+END_SRC
+
+이 코드들을 다시 =traverse= 의 정의와 교환하면 모든 =Applicative= 와 동작하도록 일반화할 수 있다. 
+#+BEGIN_SRC scala
+import scala.language.higherKinds
+
+def listTraverse[F[_]: Applicative, A, B]
+      (list: List[A])(func: A => F[B]): F[List[B]] =  
+  list.foldLeft(List.empty[B].pure[F]) { (accum, item) => 
+    (accum, func(item)).mapN(_ :+ _)
+  }
+
+def listSequence[F[_]: Applicative, B]
+      (list: List[F[B]]): F[List[B]] =
+  listTraverse(list)(identity)
+#+END_SRC
+
+이제 =listTraverse= 를 사용해서 우리의 uptime 예제를 다시 구현해보자:
+
+#+BEGIN_SRC scala
+val totalUptime = listTraverse(hostnames)(getUptime)
+
+Await.result(totalUptime, 1.second)
+// res11: List[Int] = List(1020, 960, 840)
+#+END_SRC 
+
+혹은 다음의 exercise에서 볼 수 있는 다른 =Applicative= data type과 사용할 수 있다. 
+
 **** Exercise: Traversing with Vectors
 **** Exercise: Traversing with Options
 **** Exercise: Traversing with Validated
+
 *** Traverse in Cats
+우리의 =listTraverse= 와 =listSequence= 메소드들은 =Applicative= 의 어떤 타입과도 동작이 가능하지만 sequence는 =List= 타입과만 동작이 가능하다. Cats의 Traverse를 사용할 수 있게 되는 타입 클래스를 사용하는 다른 sequence type로 generalise할 수 있다. 여기에 짧은 정의가 있다:
+#+BEGIN_SRC scala
+package cats
+
+trait Traverse[F[_]] {
+  def traverse[G[_]: Applicative, A, B]
+      (inputs: F[A])(func: A => G[B]): G[F[B]]
+ 
+ def sequence[G[_]: Applicative, B]
+      (inputs: F[G[B]]): G[F[B]] =
+    traverse(inputs)(identity)
+}
+#+END_SRC
+Cats는 =List=, =Vector=, =Stream=, =Option=, =Either=, 그리고 다양한 타입을 위한 =Traverse= 의 인스턴스를 제공한다. =Traverse.apply= 를 일반적으로 사용하는 인스턴스를 소환하고 이전 섹션에서 설명한 =traverse= 와 =sequence= 를 사용할 수 있다
+#+BEGIN_SRC scala
+import cats.Traverse
+import cats.instances.future._ // for Applicative 
+import cats.instances.list._ // for Traverse
+
+val totalUptime: Future[List[Int]] = 
+  Traverse[List].traverse(hostnames)(getUptime)
+
+Await.result(totalUptime, 1.second)
+// res1: List[Int] = List(1020, 960, 840)
+
+val numbers = List(Future(1), Future(2), Future(3))
+
+val numbers2: Future[List[Int]] =
+  Traverse[List].sequence(numbers)
+
+Await.result(numbers2, 1.second)
+// res3: List[Int] = List(1, 2, 3)
+#+END_SRC
+
+cats.syntax.traverse를 통해 import되는 메소드들의 문법 버전이 있다.
+#+BEGIN_SRC scala
+import cats.syntax.traverse._ // for sequence and traverse 
+
+Await.result(hostnames.traverse(getUptime), 1.second)
+// res4: List[Int] = List(1020, 960, 840)
+
+Await.result(numbers.sequence, 1.second)도
+// res5: List[Int] = List(1, 2, 3)
+#+END_SRC
+
+보다 시피, 이 챕터에서 시작할 때 =foldLeft= 코드보다 훨씬 더 간결하고 읽기 좋다. 
 
 ** Summary
 이 챕터에서는 sequence들을 순회하는 두 가지 타입 클래스인 =Foldable= 과 =Traverse= 를 소개했다.
