@@ -98,12 +98,38 @@ type Id[A] = A
 - =F= 를 =Future= 와 =Id= 에 바인드하는 =RealUptimeClient= 와 =TestUptimeClient= 를 상속하자;
 - 컴파일이 됨을 증명하기 위한 각각의 경우의 =getUptime= 을 위한 method signature를 작성하자;
 
-이전의 =Map[String, Int]= 에 기반한 full class로  
+이제 =TestUptimeClient= 의 정의를 이전의 =Map[String, Int]= 에 기반한 full class로 살을 붙여보자  
  
 ** 8.2 Abstracting over Monads
 =UptimeService= 로 주의를 돌려보자. =UptimeClient= 의 두가지 형식을 추상화할 수 있도록 재작성할 필요가 있다. 우리는 이를 두단계로 수행할 것이다. 첫번째로 클래스와 method signature를 다시 작성하고, method body를 재작성할 것이다. method signature부터 시작해보자
-- 
+- =getTotalUptime= 의 body를 커멘트하자(그걸 일단 컴파일 되게 되는 ???로 해놓자)
+- type parameter F[_]를 =UptimeService= 에 추가하고 =UptimeClient= 에 넘겨주자
 
+=getTotalUptime= 의 body를 uncomment하자. 다음과 같은 컴파일 에러를 만나게 될 것이다
+#+BEGIN_SRC scala
+// <console>:28: error: could not find implicit value for
+// evidence parameter of type cats.Applicative[F] 
+// hostnames.traverse(client.getUptime).map(_.sum) 
+//
+#+END_SRC
+
+여기서 문제는 =traverse= 가 =Applicative= 를 가진 값의 sequence와만 동작한다는 것이다. 우리의 원래 코드는 =List[Future[Int]]= 를 탐색하고 있었다. =Future= 를 위한 applicative가 있었기 때문에 괜찮다. 이 버전에서 우리는 =List[F[Int]]= 를 traverse한다. 이제 컴파일러에게 =F= 가 =Applicative= 임을 증명해야 할 필요가 있다. 이것은 =UptimeService= 에 implicit constructor parameter를 추가함으로써 할 수 있다.
+
+마지막으로 unit test로 주의를 돌려보자. 우리의 테스트 코드는 어떤 수정도 없이 동작할 수 있다. =TestUptimeClient= 의 인스턴스를 만들고 이를 =UptimeService= 로 wrap한다. 이는 효과적으로 =F= 를 =Id= 로 bind해주어서 나머지 코드가 monad나 applicative에 대한 걱정 없이 동기적으로 동작할 수 있도록 해준다:
+#+BEGIN_SRC scala
+def testTotalUptime() = {
+  val hosts = Map("host1" -> 10, "host2" -> 6)
+  val client = new TestUptimeClient(hosts)
+  val service = new UptimeService(client)
+  val actual = service.getTotalUptime(hosts.keys.toList) val expected = hosts.values.sum
+  assert(actual == expected)
+}
+
+testTotalUptime()
+#+END_SRC 
 
 ** 8.3 Summary
 이 case study는 어떻게 Cats가 서로 다른 computational scenario를 추상화를 도와주는 지를 알려주는 예이다. =Applicative= 타입 클래스는 asynchronous와 synchronous 코드를 추상화하는 데 사용된다. functional abstraction에 의존하는 것은 구현의 상세한 부분에 대해서 걱정할 필요 없이 수행하고 자 하는 computation의 sequence를 정의할 수 있도록 해준다.
+다시 Figure 6.1로 돌아가면, 정확하게 이러한 종류의 abstraction을 의미하는 computation type class의 "stack"을 보여줬다. =Functor=, =Applicative=, =Monad=, =Traverse= 같은 Type classs는 mapping, zipping, sequencing, iteration 같은 패턴의 구현에 대한 추상화를 제공한다. 이러한 타입들에 대한 수학적인 법칙은 sematic의 일관적인 set들과 같이 동작하는 것을 보장한다.
+우리는 이 case study에서 =Applicative= 를 사용했다. 왜냐하면 우리가 필요한 것을 할 수 있는 가장 약한 type class이기 때문이다. 만약 =flatMap= 이 필요하면, 우리는 =Applicative= 를 =Monad= 로 변경할 수 있다. 만약 우리가 다른 sequence type들에도 적용가능한 추상화가 필요하다면 =Traverse= 를 사용할 수 있다. 성공하는 computation들 뿐만 아니라 실패를 모델링하는데 도움이 되는 =ApplicativeError= 와 =MonadError= 같은 type class도 있다.
+좀 더 흥미로운 내용을 제공하는 type class들을 사용한 좀 더 복잡한 case study로 넘어가보자: paralle processing을 위한 map-reduce-style 프레임워크말이다.  
